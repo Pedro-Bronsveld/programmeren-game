@@ -113,7 +113,7 @@ class PlayerCamera extends Camera{
     private mouseHandler = (e: MouseEvent) => {
         if(this.pointerLocked){
 
-            let sens:number = 0.004;
+            let sens:number = 0.0015;
 
             this.viewRotateX += e.movementY * sens;
             this.viewRotateY -= e.movementX * sens;
