@@ -8,7 +8,7 @@ class Bullet extends MobileModel{
         super(level, "bullet");
         
         this.hasCollision = true;
-        this.collisionBox = new CollisionBox(this, 0.8, 0.8, 4, 0, 0, -1, 5, false, true);
+        this.collisionBox = new CollisionBox(this, 0.6, 0.5, 4, 0, 0, -1, 5, false, true, new THREE.Vector3(1,1,1) );
 
         //change material of bullet:
         var bulletMaterial = new THREE.MeshBasicMaterial( { color: 0xff0000 } );
@@ -75,11 +75,9 @@ class Bullet extends MobileModel{
         //set movement to 0
         this.moving.forward = 0;
 
-        //check if collision was with practice_target:
-        if(rayData.model.name == "practice_target"){
-            let model:Model = this.level.getModelByName(rayData.model.userData.uniqueName)!;
-            model.hit();
-        }
+        //tell model it was hit
+        let model:Model = this.level.getModelByName(rayData.model.userData.uniqueName)!;
+        model.hit();
     }
 
     public remove():void{

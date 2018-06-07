@@ -709,7 +709,7 @@ class Bullet extends MobileModel {
     constructor(level, gun, target) {
         super(level, "bullet");
         this.hasCollision = true;
-        this.collisionBox = new CollisionBox(this, 0.8, 0.8, 4, 0, 0, -1, 5, false, true);
+        this.collisionBox = new CollisionBox(this, 0.6, 0.5, 4, 0, 0, -1, 5, false, true, new THREE.Vector3(1, 1, 1));
         var bulletMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
         this.mesh.material = bulletMaterial;
         this.despawnTimeout = 5;
@@ -748,10 +748,8 @@ class Bullet extends MobileModel {
     }
     collided(rayData) {
         this.moving.forward = 0;
-        if (rayData.model.name == "practice_target") {
-            let model = this.level.getModelByName(rayData.model.userData.uniqueName);
-            model.hit();
-        }
+        let model = this.level.getModelByName(rayData.model.userData.uniqueName);
+        model.hit();
     }
     remove() {
         this.level.removeModel(this);
@@ -930,7 +928,7 @@ class Player extends MobileModel {
         document.addEventListener("keyup", this.keyUpHandler);
         this.gun = new Gun(this.level, this);
         if (this.hasCollision) {
-            this.collisionBox = new CollisionBox(this, 2, 7.5, 2, 0, 7.5 / 2, 0, 5, true, false, false);
+            this.collisionBox = new CollisionBox(this, 2, 7.5, 2, 0, 7.5 / 2, 0, 5, true, false, new THREE.Vector3(1, 2, 1));
         }
         this.playAction("idle");
         this.actionTimeScale("walk", 1.7);
@@ -979,7 +977,7 @@ class PracticeTarget extends Model {
     }
 }
 class CollisionBox {
-    constructor(model, sizeX = 0, sizeY = 0, sizeZ = 0, offsetX = 0, offsetY = 0, offsetZ = 0, extraDistance = 1, gravity = false, rotationEnabled = false, useSegments = false) {
+    constructor(model, sizeX = 0, sizeY = 0, sizeZ = 0, offsetX = 0, offsetY = 0, offsetZ = 0, extraDistance = 1, gravity = false, rotationEnabled = false, givenSegments = new THREE.Vector3()) {
         this.model = model;
         this.rotationEnabled = rotationEnabled;
         let collisionVisible = false;
@@ -995,16 +993,31 @@ class CollisionBox {
             let segments = new THREE.Vector3();
             function setSegment(seg) {
                 seg = Math.floor(seg);
-                if (seg < 1 || !useSegments) {
+                if (seg < 1) {
                     return 1;
                 }
                 else {
                     return seg;
                 }
             }
-            segments.x = setSegment(this.boxSize.x);
-            segments.y = setSegment(this.boxSize.y);
-            segments.z = setSegment(this.boxSize.z);
+            if (givenSegments.x == 0) {
+                segments.x = setSegment(this.boxSize.x);
+            }
+            else {
+                segments.x = setSegment(givenSegments.x);
+            }
+            if (givenSegments.y == 0) {
+                segments.y = setSegment(this.boxSize.y);
+            }
+            else {
+                segments.y = setSegment(givenSegments.y);
+            }
+            if (givenSegments.z == 0) {
+                segments.z = setSegment(this.boxSize.z);
+            }
+            else {
+                segments.z = setSegment(givenSegments.z);
+            }
             let boxGeometry = new THREE.BoxGeometry(this.boxSize.x, this.boxSize.y, this.boxSize.z, segments.x, segments.y, segments.z);
             boxGeometry.translate(this.boxOffset.x, this.boxOffset.y, this.boxOffset.z);
             let boxEdges = new THREE.EdgesGeometry(boxGeometry, 0);
@@ -1023,7 +1036,9 @@ class CollisionBox {
                     if (sideGeo.side == "x" || sideGeo.side == "z") {
                         for (let vertex of sideGeo.geometry.vertices) {
                             if (vertex.y == -this.boxSize.y / 2) {
-                                vertex.y += (this.boxSize.y / segments.y) / 2;
+                                if (this.boxSize.y >= 1) {
+                                    vertex.y += 1;
+                                }
                             }
                             if (vertex.x == this.boxSize.x / 2) {
                                 vertex.x -= (this.boxSize.x / segments.x) / 10;
@@ -1093,7 +1108,7 @@ class CollisionBox {
     set rZ(z) { this.box.rotation.z = z; }
     ;
     checkSide(sideName) {
-        let rayData = new RayData(0, new THREE.Vector3(), new THREE.Object3D(), false);
+        let rayData = new RayData(0, new THREE.Vector3(), new THREE.Object3D(), false, 0);
         for (let side of this.sides) {
             if (side.side == sideName) {
                 let direction = new THREE.Vector3().copy(side.direction);

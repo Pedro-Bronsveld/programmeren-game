@@ -15,7 +15,7 @@ class CollisionBox{
 
     private box:THREE.LineSegments;
 
-    constructor(model:MobileModel, sizeX:number=0, sizeY:number=0, sizeZ:number=0, offsetX:number=0, offsetY:number=0, offsetZ:number=0, extraDistance:number=1, gravity:boolean=false, rotationEnabled:boolean=false, useSegments:boolean=false){
+    constructor(model:MobileModel, sizeX:number=0, sizeY:number=0, sizeZ:number=0, offsetX:number=0, offsetY:number=0, offsetZ:number=0, extraDistance:number=1, gravity:boolean=false, rotationEnabled:boolean=false, givenSegments:THREE.Vector3=new THREE.Vector3()){
         this.model = model;
         this.rotationEnabled = rotationEnabled;
 
@@ -41,16 +41,33 @@ class CollisionBox{
             let segments: THREE.Vector3 = new THREE.Vector3();
             function setSegment(seg: number):number{
                 seg = Math.floor(seg);
-                if(seg < 1 || !useSegments){
+                if(seg < 1){
                     return 1;
                 }
                 else{
                     return seg
                 }
             }
-            segments.x = setSegment(this.boxSize.x);
-            segments.y = setSegment(this.boxSize.y);
-            segments.z = setSegment(this.boxSize.z);
+            if(givenSegments.x == 0){
+                segments.x = setSegment(this.boxSize.x);
+            }
+            else{
+                segments.x = setSegment(givenSegments.x);
+            }
+            
+            if(givenSegments.y == 0){
+                segments.y = setSegment(this.boxSize.y);
+            }
+            else{
+                segments.y = setSegment(givenSegments.y);
+            }
+
+            if(givenSegments.z == 0){
+                segments.z = setSegment(this.boxSize.z);
+            }
+            else{
+                segments.z = setSegment(givenSegments.z);
+            }
 
             //make box visible:
             //create box geometry:
@@ -80,7 +97,10 @@ class CollisionBox{
                         for(let vertex of sideGeo.geometry.vertices){
                             //raising lowest vertices:
                             if(vertex.y == -this.boxSize.y/2){
-                                vertex.y += (this.boxSize.y / segments.y)/2;
+                                //vertex.y += (this.boxSize.y / segments.y)/2;
+                                if(this.boxSize.y >= 1){
+                                    vertex.y += 1;
+                                }
                             }
 
                             //bringing outer vertices inward slightly:
@@ -167,7 +187,7 @@ class CollisionBox{
     //returns the distance until collision on one side of the collision box:
     private checkSide(sideName:string):RayData{
         //get side data from array:
-        let rayData: RayData = new RayData(0, new THREE.Vector3(), new THREE.Object3D(), false );
+        let rayData: RayData = new RayData(0, new THREE.Vector3(), new THREE.Object3D(), false, 0);
         for(let side of this.sides){
             if(side.side == sideName){
                 //setup side variables:
