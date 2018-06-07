@@ -1,0 +1,23 @@
+{
+  "name": "typescript_game",
+  "version": "1.0.0",
+  "description": "Making a game using typescript.",
+  "main": "dev/game.ts",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "postinstall": "node postbuild.js"
+  },
+  "author": "Pedro Bronsveld",
+  "license": "MIT",
+  "dependencies": {
+    "reqwest": "^2.0.5",
+    "three": "^0.92.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.91.13",
+    "recursive-copy": "^2.0.9"
+  }
+}

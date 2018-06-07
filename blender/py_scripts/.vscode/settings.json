@@ -1,0 +1,15 @@
+{
+    "python.pythonPath": "C:\\Users\\Pedro\\AppData\\Local\\Programs\\Python\\Python36-32\\python.exe",
+    "python.autoComplete.extraPaths": [
+        "C:/Program Files/Blender Foundation/Blender/2.79/scripts/modules"
+    ],
+    "python.linting.pylintArgs": [
+        "--disable=E0401",
+        "--disable=C0410",
+        "--disable=C0413",
+        "--disable=C0103",
+        "--disable=C0111",
+        "--disable=C0326",
+        "--disable=C0303"
+    ]
+}
