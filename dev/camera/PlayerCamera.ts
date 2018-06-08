@@ -6,6 +6,7 @@ class PlayerCamera extends Camera{
     private pointerLocked: boolean;
     private yOffset: number;
     private distance: number;
+    private defaultDistance: number;
 
     constructor(level: Level, model: Player){
         super(level);
@@ -13,8 +14,9 @@ class PlayerCamera extends Camera{
 
         //y offset of the camera
         this.yOffset = 10;
-        //distance between the player and the camera:
-        this.distance = 15;        
+        //default distance between the player and the camera:
+        this.defaultDistance = 15;
+        this.distance = this.defaultDistance;
 
         this.viewRotateX = 0;
         this.viewRotateY = 0;
@@ -140,6 +142,8 @@ class PlayerCamera extends Camera{
 
     public update(){
 
+        //updating the camera rotation:
+
         //relative offset - distance between the player model and the camera:
         let cameraOffset:THREE.Vector3 = new THREE.Vector3(0,0,-this.distance);
 
@@ -155,10 +159,7 @@ class PlayerCamera extends Camera{
         //move camera up:
         cameraOffset.y += this.yOffset;
 
-        
-
         //set camera position and rotation relative to the player model:
-        //cameraOffset.applyMatrix4( this.targetModel.getWorldMatrix() );
         let modelPos = this.targetModel.posVector;
         cameraOffset.x += modelPos.x;
         cameraOffset.y += modelPos.y;
@@ -168,7 +169,6 @@ class PlayerCamera extends Camera{
         let cameraTarget:THREE.Vector3 = this.targetModel.posVector;
         cameraTarget.y += this.yOffset;
         
-
         this.camera.position.set(cameraOffset.x, cameraOffset.y, cameraOffset.z);
 
         this.camera.lookAt(cameraTarget);

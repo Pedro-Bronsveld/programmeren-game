@@ -90,6 +90,10 @@ class CollisionBox{
                 {side:"y", geometry: new THREE.PlaneGeometry(this.boxSize.x, this.boxSize.z, segments.x, segments.z), color: 0x00ff00}  //side facing up and down
             ];
 
+            if(segments.x <= 1 && segments.z <= 1 && gravity){
+                sideGeomtries[0].geometry.vertices.push( new THREE.Vector3() );
+            }
+
             for(let sideGeo of sideGeomtries){
                 //ignore lowest vertices:
                 if(gravity){

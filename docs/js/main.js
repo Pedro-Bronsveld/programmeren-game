@@ -171,7 +171,8 @@ class PlayerCamera extends Camera {
         };
         this.targetModel = model;
         this.yOffset = 10;
-        this.distance = 15;
+        this.defaultDistance = 15;
+        this.distance = this.defaultDistance;
         this.viewRotateX = 0;
         this.viewRotateY = 0;
         this.pointerLocked = false;
@@ -561,12 +562,24 @@ class Model extends GameObject {
             }
         }
     }
-    playAction(name) {
+    playAction(name, repetitions = Infinity) {
         if (name != this.playingAction) {
             for (let key in this.actions) {
                 if (key == name) {
-                    this.actions[key].play();
-                    this.stopAction(this.playingAction);
+                    let from;
+                    if (typeof this.actions[this.playingAction] !== "undefined") {
+                        from = this.actions[this.playingAction].play();
+                    }
+                    else {
+                        from = this.actions[key];
+                    }
+                    let to = this.actions[key].play();
+                    to.reset();
+                    to.repetitions = repetitions;
+                    if (to.repetitions != Infinity) {
+                        to.clampWhenFinished = true;
+                    }
+                    from.crossFadeTo(to, 0.2, true);
                     this.playingAction = name;
                 }
             }
@@ -614,6 +627,7 @@ class MobileModel extends Model {
         this.hasGravity = false;
         this.yVelocity = 0;
         this.jump = false;
+        this.bottomDistance = 0;
         this.moving = new Moving();
         this.velocity = 35;
     }
@@ -672,6 +686,7 @@ class MobileModel extends Model {
         if (this.hasGravity) {
             let bottom = this.collisionBox.bottom().distance;
             let top = this.collisionBox.top().distance;
+            this.bottomDistance = bottom;
             let amount = 0;
             if (bottom <= 0 && this.yVelocity < 0) {
                 amount = -bottom;
@@ -870,16 +885,20 @@ class Player extends MobileModel {
             if (!e.repeat) {
                 switch (e.keyCode) {
                     case this.upKey:
-                        this.moving.forward = 1;
+                        this.moving.forward = this.dirForward;
+                        this.forward = true;
                         break;
                     case this.leftKey:
-                        this.moving.sideways = 1;
+                        this.moving.sideways = this.dirLeft;
+                        this.left = true;
                         break;
                     case this.downKey:
-                        this.moving.forward = -1;
+                        this.moving.forward = this.dirBackward;
+                        this.backward = true;
                         break;
                     case this.rightKey:
-                        this.moving.sideways = -1;
+                        this.moving.sideways = this.dirRight;
+                        this.right = true;
                         break;
                     case this.jumpKey:
                         this.jump = true;
@@ -891,24 +910,40 @@ class Player extends MobileModel {
             if (!e.repeat) {
                 switch (e.keyCode) {
                     case this.upKey:
-                        if (this.moving.forward == 1) {
+                        if (this.moving.forward == this.dirForward && !this.backward) {
                             this.moving.forward = 0;
                         }
+                        else if (this.backward) {
+                            this.moving.forward = this.dirBackward;
+                        }
+                        this.forward = false;
                         break;
                     case this.leftKey:
-                        if (this.moving.sideways == 1) {
+                        if (this.moving.sideways == this.dirLeft && !this.right) {
                             this.moving.sideways = 0;
                         }
+                        else if (this.right) {
+                            this.moving.sideways = this.dirRight;
+                        }
+                        this.left = false;
                         break;
                     case this.downKey:
-                        if (this.moving.forward == -1) {
+                        if (this.moving.forward == this.dirBackward && !this.forward) {
                             this.moving.forward = 0;
                         }
+                        else if (this.forward) {
+                            this.moving.forward = this.dirForward;
+                        }
+                        this.backward = false;
                         break;
                     case this.rightKey:
-                        if (this.moving.sideways == -1) {
+                        if (this.moving.sideways == this.dirRight && !this.left) {
                             this.moving.sideways = 0;
                         }
+                        else if (this.left) {
+                            this.moving.sideways = this.dirLeft;
+                        }
+                        this.right = false;
                         break;
                     case this.jumpKey:
                         this.jump = false;
@@ -919,6 +954,14 @@ class Player extends MobileModel {
         this.cameraRotation = 0;
         this.hasCollision = true;
         this.hasGravity = true;
+        this.forward = false;
+        this.backward = false;
+        this.left = false;
+        this.right = false;
+        this.dirForward = 1;
+        this.dirBackward = -1;
+        this.dirLeft = 1;
+        this.dirRight = -1;
         this.upKey = 87;
         this.leftKey = 65;
         this.downKey = 83;
@@ -939,7 +982,42 @@ class Player extends MobileModel {
     moveUpdate(delta) {
         if (this.moving.forward != 0 || this.moving.sideways != 0) {
             this.rotateToView();
-            this.playAction("walk");
+            if (this.yVelocity > 0.1 && this.bottomDistance > 0.1) {
+                this.playAction("jump", 0);
+            }
+            else if (this.yVelocity <= 0.1 && this.bottomDistance > 0.5) {
+                this.playAction("falling");
+            }
+            else if (this.moving.forward > 0 && this.moving.sideways == 0) {
+                this.actionTimeScale("walk", 1.7);
+                this.playAction("walk");
+            }
+            else if (this.moving.sideways == 0) {
+                this.actionTimeScale("walk", -1.7);
+                this.playAction("walk");
+            }
+            else if (this.moving.sideways > 0 && this.moving.forward >= 0) {
+                this.actionTimeScale("strafe_left", 1.7);
+                this.playAction("strafe_left");
+            }
+            else if (this.moving.sideways < 0 && this.moving.forward >= 0) {
+                this.actionTimeScale("strafe_right", 1.7);
+                this.playAction("strafe_right");
+            }
+            else if (this.moving.forward < 0 && this.moving.sideways > 0) {
+                this.actionTimeScale("strafe_right", -1.7);
+                this.playAction("strafe_right");
+            }
+            else if (this.moving.forward < 0 && this.moving.sideways < 0) {
+                this.actionTimeScale("strafe_left", -1.7);
+                this.playAction("strafe_left");
+            }
+        }
+        else if (this.yVelocity > 0.1 && this.bottomDistance > 0.1) {
+            this.playAction("jump", 0);
+        }
+        else if (this.yVelocity < -1 && this.bottomDistance > 1) {
+            this.playAction("falling");
         }
         else {
             this.playAction("idle");
@@ -1031,6 +1109,9 @@ class CollisionBox {
                 { side: "x", geometry: new THREE.PlaneGeometry(this.boxSize.z, this.boxSize.y, segments.z, segments.y), color: 0x0000ff },
                 { side: "y", geometry: new THREE.PlaneGeometry(this.boxSize.x, this.boxSize.z, segments.x, segments.z), color: 0x00ff00 }
             ];
+            if (segments.x <= 1 && segments.z <= 1 && gravity) {
+                sideGeomtries[0].geometry.vertices.push(new THREE.Vector3());
+            }
             for (let sideGeo of sideGeomtries) {
                 if (gravity) {
                     if (sideGeo.side == "x" || sideGeo.side == "z") {

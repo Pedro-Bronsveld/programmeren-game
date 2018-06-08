@@ -131,12 +131,29 @@ class Model extends GameObject{
     }
 
     //play an action:
-    protected playAction(name: string):void{
+    protected playAction(name: string, repetitions:number=Infinity):void{
         if(name != this.playingAction){
             for(let key in this.actions){
                 if(key == name){
-                    this.actions[key].play();
-                    this.stopAction(this.playingAction);
+                    let from: THREE.AnimationAction;
+                    
+                    if(typeof this.actions[this.playingAction] !== "undefined"){
+                        from = this.actions[this.playingAction].play();
+                    }
+                    else{
+                        from = this.actions[key];
+                    }
+                    
+                    let to: THREE.AnimationAction = this.actions[key].play();
+                    to.reset();
+
+                    to.repetitions = repetitions;
+                    if(to.repetitions != Infinity){
+                        to.clampWhenFinished = true;
+                    }
+
+                    from.crossFadeTo(to, 0.2, true);
+                    //this.stopAction(this.playingAction);
                     this.playingAction = name;
                 }
             }

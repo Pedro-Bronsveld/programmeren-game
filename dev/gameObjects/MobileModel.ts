@@ -10,6 +10,7 @@ class MobileModel extends Model{
     protected hasGravity: boolean;
     protected yVelocity: number;
     protected jump: boolean;
+    protected bottomDistance: number;
 
     constructor(level: Level, model: string, modelSource: ModelSource = new ModelSource(), autoAdd:boolean=true){
         super(level, model, modelSource, autoAdd);
@@ -21,6 +22,7 @@ class MobileModel extends Model{
         this.hasGravity = false;
         this.yVelocity = 0;
         this.jump = false;
+        this.bottomDistance = 0;
 
         //horizontal movement:
         this.moving = new Moving();
@@ -115,6 +117,7 @@ class MobileModel extends Model{
             //get distance on bottom:
             let bottom: number = this.collisionBox.bottom().distance;
             let top: number = this.collisionBox.top().distance;
+            this.bottomDistance = bottom;
 
             //ammount to translate y:
             let amount: number = 0;
