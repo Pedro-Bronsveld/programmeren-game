@@ -140,22 +140,57 @@ class PlayerCamera extends Camera{
         return this.viewRotateX;
     }
 
-    public update(){
+    public update():void{
+
+        function changeDirection(inputVector:THREE.Vector3, angleX:number, angleY:number):THREE.Vector3{
+            //change the direction of a vector:
+            //x and y axis:
+            let axisX: THREE.Vector3 = new THREE.Vector3(1,0,0);
+            let axisY: THREE.Vector3 = new THREE.Vector3(0,1,0);
+
+            //create output vector:
+            let directionVector: THREE.Vector3 = new THREE.Vector3().copy(inputVector);
+            //change direction:
+            directionVector.applyAxisAngle(axisX, angleX);
+            directionVector.applyAxisAngle(axisY, angleY);
+            return directionVector;
+        }
+
+        //create the target vector of the camera:
+        let cameraTarget:THREE.Vector3 = this.targetModel.posVector;
+        cameraTarget.y += this.yOffset;
 
         //updating the camera rotation:
 
-        //relative offset - distance between the player model and the camera:
-        let cameraOffset:THREE.Vector3 = new THREE.Vector3(0,0,-this.distance);
-
-        //rotate the camera on two axis:
-        let axisX: THREE.Vector3 = new THREE.Vector3(1,0,0);
+        //angles to rotate:
         let angleX:number = this.viewRotateX;
-
-        let axisY: THREE.Vector3 = new THREE.Vector3(0,1,0);
         let angleY:number = this.viewRotateY;
-        //apply rotation:
-        cameraOffset.applyAxisAngle(axisX, angleX);
-        cameraOffset.applyAxisAngle(axisY, angleY);
+
+        //check if there's no objects between the camera and the player:
+        //set directional vector:
+        let raycasterDirection: THREE.Vector3 = new THREE.Vector3(0,0,-1);
+        //change rotation of vector:
+        raycasterDirection = changeDirection(raycasterDirection, angleX, angleY);
+        //create raycaster, origin point is the camera target vector:
+        let rayCaster: THREE.Raycaster = new THREE.Raycaster(cameraTarget, raycasterDirection, 0, this.distance + 1);
+        let intersects: Array<THREE.Intersection> = rayCaster.intersectObjects( this.level.getScene().children );
+
+        //relative offset - distance between the player model and the camera:
+        let cameraOffset:THREE.Vector3;
+        if(intersects.length > 0){
+            //object intersected, camera needs to be closer to the target:
+            let distance: number = intersects[0].distance - 1;
+            cameraOffset = new THREE.Vector3(0,0,-distance);
+
+        }
+        else{
+            cameraOffset = new THREE.Vector3(0,0,-this.distance);
+        }
+
+
+        //change rotation of camera vector:
+        cameraOffset = changeDirection(cameraOffset, angleX, angleY);
+        
         //move camera up:
         cameraOffset.y += this.yOffset;
 
@@ -164,10 +199,6 @@ class PlayerCamera extends Camera{
         cameraOffset.x += modelPos.x;
         cameraOffset.y += modelPos.y;
         cameraOffset.z += modelPos.z;
-
-        //set the target vector of the camera:
-        let cameraTarget:THREE.Vector3 = this.targetModel.posVector;
-        cameraTarget.y += this.yOffset;
         
         this.camera.position.set(cameraOffset.x, cameraOffset.y, cameraOffset.z);
 

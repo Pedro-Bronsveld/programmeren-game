@@ -227,20 +227,36 @@ class PlayerCamera extends Camera {
         return this.viewRotateX;
     }
     update() {
-        let cameraOffset = new THREE.Vector3(0, 0, -this.distance);
-        let axisX = new THREE.Vector3(1, 0, 0);
+        function changeDirection(inputVector, angleX, angleY) {
+            let axisX = new THREE.Vector3(1, 0, 0);
+            let axisY = new THREE.Vector3(0, 1, 0);
+            let directionVector = new THREE.Vector3().copy(inputVector);
+            directionVector.applyAxisAngle(axisX, angleX);
+            directionVector.applyAxisAngle(axisY, angleY);
+            return directionVector;
+        }
+        let cameraTarget = this.targetModel.posVector;
+        cameraTarget.y += this.yOffset;
         let angleX = this.viewRotateX;
-        let axisY = new THREE.Vector3(0, 1, 0);
         let angleY = this.viewRotateY;
-        cameraOffset.applyAxisAngle(axisX, angleX);
-        cameraOffset.applyAxisAngle(axisY, angleY);
+        let raycasterDirection = new THREE.Vector3(0, 0, -1);
+        raycasterDirection = changeDirection(raycasterDirection, angleX, angleY);
+        let rayCaster = new THREE.Raycaster(cameraTarget, raycasterDirection, 0, this.distance + 1);
+        let intersects = rayCaster.intersectObjects(this.level.getScene().children);
+        let cameraOffset;
+        if (intersects.length > 0) {
+            let distance = intersects[0].distance - 1;
+            cameraOffset = new THREE.Vector3(0, 0, -distance);
+        }
+        else {
+            cameraOffset = new THREE.Vector3(0, 0, -this.distance);
+        }
+        cameraOffset = changeDirection(cameraOffset, angleX, angleY);
         cameraOffset.y += this.yOffset;
         let modelPos = this.targetModel.posVector;
         cameraOffset.x += modelPos.x;
         cameraOffset.y += modelPos.y;
         cameraOffset.z += modelPos.z;
-        let cameraTarget = this.targetModel.posVector;
-        cameraTarget.y += this.yOffset;
         this.camera.position.set(cameraOffset.x, cameraOffset.y, cameraOffset.z);
         this.camera.lookAt(cameraTarget);
     }
