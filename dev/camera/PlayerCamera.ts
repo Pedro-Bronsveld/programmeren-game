@@ -59,7 +59,7 @@ class PlayerCamera extends Camera{
 
 
         //create raycaster
-        let rayCaster: THREE.Raycaster = new THREE.Raycaster(this.camera.position, direction, this.distance, maxDistance);
+        let rayCaster: THREE.Raycaster = new THREE.Raycaster(this.camera.position, direction, 0, maxDistance);
         //get intersected objects:
         let intersects: THREE.Intersection[] = rayCaster.intersectObjects( this.level.getScene().children );
 
@@ -174,6 +174,16 @@ class PlayerCamera extends Camera{
         //create raycaster, origin point is the camera target vector:
         let rayCaster: THREE.Raycaster = new THREE.Raycaster(cameraTarget, raycasterDirection, 0, this.distance + 1);
         let intersects: Array<THREE.Intersection> = rayCaster.intersectObjects( this.level.getScene().children );
+
+        //ignore player model:
+        for(let i = 0; i < intersects.length; ){
+            if( intersects[i].object.userData.uniqueName == this.level.player.modelName ){
+                intersects.splice(i, 1);
+            }
+            else{
+                i++;
+            }
+        }
 
         //relative offset - distance between the player model and the camera:
         let cameraOffset:THREE.Vector3;

@@ -42,12 +42,14 @@ class MobileModel extends Model{
         let moveX:number = Math.abs(this.moving.sideways);
         let moveTotal:number = moveZ + moveX;
 
-        if(moveTotal > 0){
-
+        if(this.collisionBox.collisionVisible){
             //set rotation for debugging collision box mesh:
             this.collisionBox.rX = -this.rX;
             this.collisionBox.rY = -this.rY;
             this.collisionBox.rZ = -this.rZ;
+        }
+
+        if(moveTotal > 0){            
 
             //caluclate amount to move forward and sideways:
             let dirZ:number = this.moving.forward / moveZ;

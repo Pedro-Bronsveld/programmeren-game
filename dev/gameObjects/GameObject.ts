@@ -2,7 +2,7 @@ class GameObject{
     readonly name: string;
     protected propLevel: Level;
     protected objectType: string;
-    protected modelName: string;
+    readonly modelName: string;
     constructor(level: Level, name: string,  objectType: string){
         this.modelName = name;
         this.propLevel = level;

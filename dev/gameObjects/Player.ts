@@ -229,7 +229,7 @@ class Player extends MobileModel{
 
     public rotateToView():void{
         //set y axis rotation equal to the camera:
-        let rotationY:number = this.propLevel.cam.viewRotY;
+        let rotationY:number = this.level.cam.viewRotY;
         this.rY = rotationY;
     }
 
@@ -238,8 +238,10 @@ class Player extends MobileModel{
     }
 
     public update(delta: number){
-
+        
         super.update(delta);
+
+        this.gun.update(delta);
     }
 
 }

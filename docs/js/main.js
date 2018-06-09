@@ -194,7 +194,7 @@ class PlayerCamera extends Camera {
         let direction = new THREE.Vector3(0, 0, -1);
         direction.applyQuaternion(this.camera.quaternion);
         let maxDistance = 200;
-        let rayCaster = new THREE.Raycaster(this.camera.position, direction, this.distance, maxDistance);
+        let rayCaster = new THREE.Raycaster(this.camera.position, direction, 0, maxDistance);
         let intersects = rayCaster.intersectObjects(this.level.getScene().children);
         let i = 0;
         while (i < intersects.length) {
@@ -243,6 +243,14 @@ class PlayerCamera extends Camera {
         raycasterDirection = changeDirection(raycasterDirection, angleX, angleY);
         let rayCaster = new THREE.Raycaster(cameraTarget, raycasterDirection, 0, this.distance + 1);
         let intersects = rayCaster.intersectObjects(this.level.getScene().children);
+        for (let i = 0; i < intersects.length;) {
+            if (intersects[i].object.userData.uniqueName == this.level.player.modelName) {
+                intersects.splice(i, 1);
+            }
+            else {
+                i++;
+            }
+        }
         let cameraOffset;
         if (intersects.length > 0) {
             let distance = intersects[0].distance - 1;
@@ -654,10 +662,12 @@ class MobileModel extends Model {
         let moveZ = Math.abs(this.moving.forward);
         let moveX = Math.abs(this.moving.sideways);
         let moveTotal = moveZ + moveX;
-        if (moveTotal > 0) {
+        if (this.collisionBox.collisionVisible) {
             this.collisionBox.rX = -this.rX;
             this.collisionBox.rY = -this.rY;
             this.collisionBox.rZ = -this.rZ;
+        }
+        if (moveTotal > 0) {
             let dirZ = this.moving.forward / moveZ;
             let dirX = this.moving.sideways / moveX;
             if (isNaN(dirZ)) {
@@ -740,7 +750,7 @@ class Bullet extends MobileModel {
     constructor(level, gun, target) {
         super(level, "bullet");
         this.hasCollision = true;
-        this.collisionBox = new CollisionBox(this, 0.6, 0.5, 4, 0, 0, -1, 5, false, true, new THREE.Vector3(1, 1, 1));
+        this.collisionBox = new CollisionBox(this, 1, 0.9, 6, 0, 0, -1.5, 5, false, true, new THREE.Vector3(1, 1, 1));
         var bulletMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
         this.mesh.material = bulletMaterial;
         this.despawnTimeout = 5;
@@ -748,7 +758,6 @@ class Bullet extends MobileModel {
         position.x = -5;
         position.z = -0.75;
         position.applyMatrix4(gun.getWorldMatrix());
-        console.log();
         this.posVector = position;
         this.mesh.lookAt(target);
         this.moving.forward = 1;
@@ -763,15 +772,13 @@ class Bullet extends MobileModel {
             let front = this.collisionBox.front();
             if (front.distance <= 0 && front.intersected) {
                 this.collided(front);
+                return;
             }
-            if (this.moving.forward > 0) {
-                let amount = this.velocity * delta;
-                if (front.distance < amount && front.intersected) {
-                    amount = front.distance + 0.2;
-                    this.collided(front);
-                }
-                this.mesh.translateZ(amount);
+            let amount = this.velocity * delta;
+            if (front.distance < amount && front.intersected) {
+                amount = front.distance + 0.2;
             }
+            this.mesh.translateZ(amount);
         }
         else if (this.despawnTimeout > 1) {
             this.despawnTimeout = 1;
@@ -779,6 +786,7 @@ class Bullet extends MobileModel {
     }
     collided(rayData) {
         this.moving.forward = 0;
+        this.despawnTimeout = 1;
         let model = this.level.getModelByName(rayData.model.userData.uniqueName);
         model.hit();
     }
@@ -794,17 +802,32 @@ class Gun extends Model {
         super(level, "gun", undefined, false);
         this.player = player;
         this.hand = player.getMesh().getObjectByName("hand.R");
+        this.fireState = 0;
         this.rX = Math.PI;
         this.rY = Math.PI / 2;
         this.pX = -0.15;
         this.pY = -0.13;
         this.pZ = -0.36;
         this.hand.add(this.mesh);
-        window.addEventListener("click", (e) => this.fire(e));
+        window.addEventListener("click", (e) => this.mouseHandler(e));
     }
-    fire(e) {
-        this.player.rotateToView();
-        new Bullet(this.level, this, this.level.cam.getTarget());
+    mouseHandler(e) {
+        if (this.fireState == 0) {
+            this.fireState = 1;
+        }
+    }
+    update(delta) {
+        if (this.fireState == 1) {
+            this.player.rotateToView();
+            this.fireState = 2;
+        }
+        else if (this.fireState == 2) {
+            this.fireState = 3;
+        }
+        else if (this.fireState == 3) {
+            new Bullet(this.level, this, this.level.cam.getTarget());
+            this.fireState = 0;
+        }
     }
 }
 class Light extends GameObject {
@@ -1041,7 +1064,7 @@ class Player extends MobileModel {
         super.moveUpdate(delta);
     }
     rotateToView() {
-        let rotationY = this.propLevel.cam.viewRotY;
+        let rotationY = this.level.cam.viewRotY;
         this.rY = rotationY;
     }
     getCameraRotation() {
@@ -1049,6 +1072,7 @@ class Player extends MobileModel {
     }
     update(delta) {
         super.update(delta);
+        this.gun.update(delta);
     }
 }
 class PracticeTarget extends Model {
@@ -1071,10 +1095,10 @@ class PracticeTarget extends Model {
     }
 }
 class CollisionBox {
-    constructor(model, sizeX = 0, sizeY = 0, sizeZ = 0, offsetX = 0, offsetY = 0, offsetZ = 0, extraDistance = 1, gravity = false, rotationEnabled = false, givenSegments = new THREE.Vector3()) {
+    constructor(model, sizeX = 0, sizeY = 0, sizeZ = 0, offsetX = 0, offsetY = 0, offsetZ = 0, extraDistance = 1, gravity = false, rotationEnabled = false, givenSegments = new THREE.Vector3(), centerVertex = true) {
         this.model = model;
         this.rotationEnabled = rotationEnabled;
-        let collisionVisible = false;
+        this.collisionVisible = false;
         this.extraDistance = extraDistance;
         this.sideZ = new THREE.PlaneGeometry(0, 0);
         this.sideX = new THREE.PlaneGeometry(0, 0);
@@ -1117,7 +1141,7 @@ class CollisionBox {
             let boxEdges = new THREE.EdgesGeometry(boxGeometry, 0);
             let boxLine = new THREE.LineSegments(boxEdges, new THREE.LineBasicMaterial({ color: 0xffffff }));
             this.box = boxLine;
-            if (collisionVisible) {
+            if (this.collisionVisible) {
                 model.getMesh().add(this.box);
             }
             let sideGeomtries = [
@@ -1125,7 +1149,12 @@ class CollisionBox {
                 { side: "x", geometry: new THREE.PlaneGeometry(this.boxSize.z, this.boxSize.y, segments.z, segments.y), color: 0x0000ff },
                 { side: "y", geometry: new THREE.PlaneGeometry(this.boxSize.x, this.boxSize.z, segments.x, segments.z), color: 0x00ff00 }
             ];
-            if (segments.x <= 1 && segments.z <= 1 && gravity) {
+            if (centerVertex) {
+                for (let side of sideGeomtries) {
+                    side.geometry.vertices.push(new THREE.Vector3());
+                }
+            }
+            else if (segments.x <= 1 && segments.z <= 1 && gravity) {
                 sideGeomtries[0].geometry.vertices.push(new THREE.Vector3());
             }
             for (let sideGeo of sideGeomtries) {
@@ -1169,7 +1198,7 @@ class CollisionBox {
                     sideGeo.geometry.rotateX(Math.PI / 2);
                 }
                 sideGeo.geometry.translate(this.boxOffset.x, this.boxOffset.y, this.boxOffset.z);
-                if (collisionVisible) {
+                if (this.collisionVisible) {
                     let edges = new THREE.EdgesGeometry(sideGeo.geometry, 0);
                     let line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: sideGeo.color }));
                     this.box.add(line);

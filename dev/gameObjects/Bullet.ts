@@ -8,7 +8,7 @@ class Bullet extends MobileModel{
         super(level, "bullet");
         
         this.hasCollision = true;
-        this.collisionBox = new CollisionBox(this, 0.6, 0.5, 4, 0, 0, -1, 5, false, true, new THREE.Vector3(1,1,1) );
+        this.collisionBox = new CollisionBox(this, 1, 0.9, 6, 0, 0, -1.5, 5, false, true, new THREE.Vector3(1,1,1) );
 
         //change material of bullet:
         var bulletMaterial = new THREE.MeshBasicMaterial( { color: 0xff0000 } );
@@ -22,8 +22,7 @@ class Bullet extends MobileModel{
         position.x = -5;
         position.z = -0.75;
 
-        position.applyMatrix4( gun.getWorldMatrix() );
-        console.log();   
+        position.applyMatrix4( gun.getWorldMatrix() ); 
         this.posVector = position;
 
         this.mesh.lookAt(target);
@@ -47,23 +46,23 @@ class Bullet extends MobileModel{
         if(this.moving.forward > 0){
             let front: RayData = this.collisionBox.front();
 
-            if(front.distance <= 0 && front.intersected){
+            //check for colision:
+            if(front.distance <= 0 && front.intersected ){
                 this.collided(front);
+                return;
             }
 
-            if(this.moving.forward > 0){
-                //amount to translate:
-                let amount: number = this.velocity * delta;
+            //amount to translate:
+            let amount: number = this.velocity * delta;
 
-                //check for collision:
-                if(front.distance < amount && front.intersected){
-                    amount = front.distance + 0.2;
-                    this.collided(front);
-                }
-
-                this.mesh.translateZ(amount);
-
+            //check for incomming colision:
+            if(front.distance < amount && front.intersected){
+                amount = front.distance + 0.2;
+                //this.collided(front);
             }
+
+            this.mesh.translateZ(amount);
+
         }
         else if(this.despawnTimeout > 1){
             this.despawnTimeout = 1;
@@ -74,6 +73,9 @@ class Bullet extends MobileModel{
     private collided(rayData: RayData):void{
         //set movement to 0
         this.moving.forward = 0;
+
+        //set bullet to despawn after 1 second:
+        this.despawnTimeout = 1;
 
         //tell model it was hit
         let model:Model = this.level.getModelByName(rayData.model.userData.uniqueName)!;

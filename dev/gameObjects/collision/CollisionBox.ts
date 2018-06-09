@@ -14,13 +14,14 @@ class CollisionBox{
     private rotationEnabled: boolean;
 
     private box:THREE.LineSegments;
+    readonly collisionVisible: boolean;
 
-    constructor(model:MobileModel, sizeX:number=0, sizeY:number=0, sizeZ:number=0, offsetX:number=0, offsetY:number=0, offsetZ:number=0, extraDistance:number=1, gravity:boolean=false, rotationEnabled:boolean=false, givenSegments:THREE.Vector3=new THREE.Vector3()){
+    constructor(model:MobileModel, sizeX:number=0, sizeY:number=0, sizeZ:number=0, offsetX:number=0, offsetY:number=0, offsetZ:number=0, extraDistance:number=1, gravity:boolean=false, rotationEnabled:boolean=false, givenSegments:THREE.Vector3=new THREE.Vector3(), centerVertex:boolean=true){
         this.model = model;
         this.rotationEnabled = rotationEnabled;
 
         //for development:
-        let collisionVisible:boolean = false;
+        this.collisionVisible = false;
 
         //how far the raycaster rays should check beyond the collision box:
         this.extraDistance = extraDistance;
@@ -79,7 +80,7 @@ class CollisionBox{
             this.box = boxLine;
             //add lines to model to see size of collision box:
 
-            if(collisionVisible){ 
+            if(this.collisionVisible){ 
                 model.getMesh().add(this.box);
             }
 
@@ -90,7 +91,13 @@ class CollisionBox{
                 {side:"y", geometry: new THREE.PlaneGeometry(this.boxSize.x, this.boxSize.z, segments.x, segments.z), color: 0x00ff00}  //side facing up and down
             ];
 
-            if(segments.x <= 1 && segments.z <= 1 && gravity){
+            //add extra vertex to center:
+            if(centerVertex){
+                for(let side of sideGeomtries){
+                    side.geometry.vertices.push( new THREE.Vector3() );
+                }
+            }
+            else if(segments.x <= 1 && segments.z <= 1 && gravity){
                 sideGeomtries[0].geometry.vertices.push( new THREE.Vector3() );
             }
 
@@ -144,7 +151,7 @@ class CollisionBox{
                 //set offset:
                 sideGeo.geometry.translate(this.boxOffset.x, this.boxOffset.y, this.boxOffset.z);
 
-                if(collisionVisible){
+                if(this.collisionVisible){
                     //make side visible:
                     let edges: THREE.EdgesGeometry = new THREE.EdgesGeometry( sideGeo.geometry, 0 );
                     let line: THREE.LineSegments = new THREE.LineSegments( edges, new THREE.LineBasicMaterial( { color: sideGeo.color } ) );
