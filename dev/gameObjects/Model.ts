@@ -45,7 +45,7 @@ class Model extends GameObject{
             this.level.addModel(this);
         }
         else{
-            this.level.addModelName(this.name, this);
+            this.level.addModelOnly(this);
         }
 
         //position mesh:
@@ -122,6 +122,7 @@ class Model extends GameObject{
     }
 
     //stop any action of the model that is playing:
+    /*
     private stopAction(name: string):void{
         for(let key in this.actions){
             if(key == name){
@@ -129,6 +130,7 @@ class Model extends GameObject{
             }
         }
     }
+    */
 
     //play an action:
     protected playAction(name: string, repetitions:number=Infinity):void{

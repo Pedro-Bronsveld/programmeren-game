@@ -74,7 +74,7 @@ class Light extends GameObject{
     }
 
     //update in gameloop:
-    update(delta: number):void{
+    update():void{
         if(this.modelName == "Sun"){
             this.propLight.position.set(
                 this.lightSource.location.x + this.level.player.pX, 

@@ -271,119 +271,6 @@ class PlayerCamera extends Camera {
         this.camera.lookAt(cameraTarget);
     }
 }
-class Level {
-    constructor(game, levelName) {
-        this.propGame = game;
-        this.noCollisionModels = ["bullet", "gun", "ShadowHelper", "skybox"];
-        this.noCollisionNames = [];
-        this.scene = new THREE.Scene();
-        this.propSkyColor = { r: 255, g: 255, b: 255 };
-        this.models = new Array();
-        this.lights = new Array();
-        this.propPlayer = new Player(this);
-        this.camera = new PlayerCamera(this, this.player);
-        this.camera.assignToRenderer(this.propGame.renderer);
-        this.scene.add(this.camera.camera);
-        this.ambientLight = new THREE.AmbientLight(0xffffff);
-        this.scene.add(this.ambientLight);
-        let levelSrcData = this.game.levelDataByName(levelName);
-        this.propSkyColor = levelSrcData.horizon_color;
-        this.ambientLight.intensity = levelSrcData.environment_light;
-        for (let key in levelSrcData.objects) {
-            let obj = levelSrcData.objects[key];
-            if (obj.model == "turret_base") {
-                new TurretBase(this, obj);
-            }
-            else if (obj.model == "practice_target") {
-                new PracticeTarget(this, obj);
-            }
-            else if (obj.type == 'MESH') {
-                new Model(this, obj.model, obj);
-            }
-            else if (obj.type == "LAMP") {
-                new Light(this, obj.model, obj);
-            }
-        }
-        new Skybox(this);
-    }
-    get player() {
-        return this.propPlayer;
-    }
-    get skyColor() {
-        return this.propSkyColor;
-    }
-    get game() {
-        return this.propGame;
-    }
-    getScene() {
-        return this.scene;
-    }
-    assignToRenderer(renderer) {
-        renderer.scene = this.scene;
-    }
-    get cam() {
-        return this.camera;
-    }
-    addModelName(name, model) {
-        this.models.push(model);
-    }
-    addModel(model) {
-        this.addModelName(model.name, model);
-        this.scene.add(model.getMesh());
-    }
-    addLight(light) {
-        this.lights.push(light);
-        this.scene.add(light.light);
-    }
-    addNoCollisionName(name) {
-        this.noCollisionNames.push(name);
-    }
-    getNoCollisionNames() {
-        return this.noCollisionNames;
-    }
-    getModelByName(name) {
-        for (let model of this.models) {
-            if (model.name == name) {
-                return model;
-            }
-        }
-        return null;
-    }
-    removeModel(model) {
-        let modelsCount = this.models.length;
-        for (let i = 0; i < modelsCount; i++) {
-            if (this.models[i] == model) {
-                this.models.splice(i, 1);
-                this.scene.remove(model.getMesh());
-            }
-        }
-    }
-    removeModelByName(name) {
-        let model = this.getModelByName(name);
-        if (model) {
-            this.removeModel(model);
-        }
-    }
-    namesInUse() {
-        let names = new Array();
-        for (let model of this.models) {
-            names.push(model.name);
-        }
-        for (let light of this.lights) {
-            names.push(light.name);
-        }
-        return names;
-    }
-    update(delta) {
-        for (let model of this.models) {
-            model.update(delta);
-        }
-        for (let light of this.lights) {
-            light.update(delta);
-        }
-        this.camera.update();
-    }
-}
 class LightSource {
     constructor() {
         this.name = "new_light";
@@ -519,7 +406,7 @@ class Model extends GameObject {
             this.level.addModel(this);
         }
         else {
-            this.level.addModelName(this.name, this);
+            this.level.addModelOnly(this);
         }
         this.posVector = new THREE.Vector3(this.modelSource.location.x, this.modelSource.location.y, this.modelSource.location.z);
         this.rotVector = new THREE.Vector3(this.modelSource.rotation.x, this.modelSource.rotation.y, this.modelSource.rotation.z);
@@ -590,13 +477,6 @@ class Model extends GameObject {
     }
     getWorldMatrix() {
         return this.mesh.matrixWorld;
-    }
-    stopAction(name) {
-        for (let key in this.actions) {
-            if (key == name) {
-                this.actions[key].stop();
-            }
-        }
     }
     playAction(name, repetitions = Infinity) {
         if (name != this.playingAction) {
@@ -867,14 +747,14 @@ class Gun extends Model {
         this.pY = -0.13;
         this.pZ = -0.36;
         this.hand.add(this.mesh);
-        window.addEventListener("click", (e) => this.mouseHandler(e));
+        window.addEventListener("click", () => this.mouseHandler());
     }
-    mouseHandler(e) {
+    mouseHandler() {
         if (this.fireState == 0) {
             this.fireState = 1;
         }
     }
-    update(delta) {
+    update() {
         if (!this.player.isDead) {
             if (this.fireState == 1) {
                 this.player.rotateToView();
@@ -950,7 +830,7 @@ class Light extends GameObject {
         this.pY = vector3.y;
         this.pZ = vector3.z;
     }
-    update(delta) {
+    update() {
         if (this.modelName == "Sun") {
             this.propLight.position.set(this.lightSource.location.x + this.level.player.pX, this.lightSource.location.y + this.level.player.pY, this.lightSource.location.z + this.level.player.pZ);
         }
@@ -990,6 +870,7 @@ class Player extends MobileModel {
     constructor(level) {
         super(level, "player");
         this.keyDownHandler = (e) => {
+            e.stopPropagation();
             if (!e.repeat) {
                 switch (e.keyCode) {
                     case this.upKey:
@@ -1081,7 +962,7 @@ class Player extends MobileModel {
         this.jumpKey = 32;
         document.addEventListener("keydown", this.keyDownHandler);
         document.addEventListener("keyup", this.keyUpHandler);
-        this.gun = new Gun(this.level, this);
+        new Gun(this.level, this);
         if (this.hasCollision) {
             this.collisionBox = new CollisionBox(this, 2, 7.5, 2, 0, 7.5 / 2, 0, 5, true, false, new THREE.Vector3(1, 2, 1), true, [this.modelName, "turret_top"]);
         }
@@ -1420,7 +1301,6 @@ class TurretTop extends Model {
         this.cooldown = 1;
         this.intersectsFilter = new IntersectsFilter(this.level, ["practice_target"], [this.name, this.turretBase.name]);
         this.targetOffset = new THREE.Vector3(0, 3.5, 0);
-        this.turnSpeed = Math.PI;
         this.health = 100;
         this.destroyed = false;
     }
@@ -1441,9 +1321,10 @@ class TurretTop extends Model {
     }
     update(delta) {
         super.update(delta);
-        if (!this.destroyed && !this.level.player.isDead) {
-            let newTarget = this.level.player.posVector;
-            newTarget.y += this.targetOffset.y;
+        let newTarget = this.level.player.posVector;
+        newTarget.y += this.targetOffset.y;
+        let distanceToTarget = this.posVector.distanceTo(newTarget);
+        if (!this.destroyed && !this.level.player.isDead && distanceToTarget < 300) {
             let direction = new THREE.Vector3();
             direction.subVectors(newTarget, this.posVector).normalize();
             let raycaster = new THREE.Raycaster(this.posVector, direction, 0, 200);
@@ -1454,7 +1335,6 @@ class TurretTop extends Model {
             }
             if (intersects.length > 0 && intersects[0].object.name == "player") {
                 this.target = newTarget;
-                let rYstart = this.rY;
                 this.mesh.lookAt(this.target);
             }
             if (this.cooldown <= 0) {
@@ -1462,6 +1342,119 @@ class TurretTop extends Model {
                 this.cooldown = 1;
             }
         }
+    }
+}
+class Level {
+    constructor(game, levelName) {
+        this.propGame = game;
+        this.noCollisionModels = ["bullet", "gun", "ShadowHelper", "skybox"];
+        this.noCollisionNames = [];
+        this.scene = new THREE.Scene();
+        this.propSkyColor = { r: 255, g: 255, b: 255 };
+        this.models = new Array();
+        this.lights = new Array();
+        this.propPlayer = new Player(this);
+        this.playerCamera = new PlayerCamera(this, this.player);
+        this.playerCamera.assignToRenderer(this.propGame.renderer);
+        this.scene.add(this.playerCamera.camera);
+        this.ambientLight = new THREE.AmbientLight(0xffffff);
+        this.scene.add(this.ambientLight);
+        let levelSrcData = this.game.levelDataByName(levelName);
+        this.propSkyColor = levelSrcData.horizon_color;
+        this.ambientLight.intensity = levelSrcData.environment_light;
+        for (let key in levelSrcData.objects) {
+            let obj = levelSrcData.objects[key];
+            if (obj.model == "turret_base") {
+                new TurretBase(this, obj);
+            }
+            else if (obj.model == "practice_target") {
+                new PracticeTarget(this, obj);
+            }
+            else if (obj.type == 'MESH') {
+                new Model(this, obj.model, obj);
+            }
+            else if (obj.type == "LAMP") {
+                new Light(this, obj.model, obj);
+            }
+        }
+        new Skybox(this);
+    }
+    get player() {
+        return this.propPlayer;
+    }
+    get skyColor() {
+        return this.propSkyColor;
+    }
+    get game() {
+        return this.propGame;
+    }
+    getScene() {
+        return this.scene;
+    }
+    assignToRenderer(renderer) {
+        renderer.scene = this.scene;
+    }
+    get cam() {
+        return this.playerCamera;
+    }
+    addModelOnly(model) {
+        this.models.push(model);
+    }
+    addModel(model) {
+        this.addModelOnly(model);
+        this.scene.add(model.getMesh());
+    }
+    addLight(light) {
+        this.lights.push(light);
+        this.scene.add(light.light);
+    }
+    addNoCollisionName(name) {
+        this.noCollisionNames.push(name);
+    }
+    getNoCollisionNames() {
+        return this.noCollisionNames;
+    }
+    getModelByName(name) {
+        for (let model of this.models) {
+            if (model.name == name) {
+                return model;
+            }
+        }
+        return null;
+    }
+    removeModel(model) {
+        let modelsCount = this.models.length;
+        for (let i = 0; i < modelsCount; i++) {
+            if (this.models[i] == model) {
+                this.models.splice(i, 1);
+                this.scene.remove(model.getMesh());
+            }
+        }
+    }
+    removeModelByName(name) {
+        let model = this.getModelByName(name);
+        if (model) {
+            this.removeModel(model);
+        }
+    }
+    namesInUse() {
+        let names = new Array();
+        for (let model of this.models) {
+            names.push(model.name);
+        }
+        for (let light of this.lights) {
+            names.push(light.name);
+        }
+        return names;
+    }
+    update(delta) {
+        for (let model of this.models) {
+            model.update(delta);
+        }
+        for (let light of this.lights) {
+            light.update();
+        }
+        this.playerCamera.update();
     }
 }
 //# sourceMappingURL=main.js.map

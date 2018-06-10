@@ -15,7 +15,8 @@ class Gun extends Model{
         //fire state of gun:
         // 0: waiting for click fire event.
         // 1: click event initiated fire.
-        // 2: create bullet in next update loop.
+        // 2: extra state because the player turning around takes another frame...
+        // 3: create bullet in next update loop.
         this.fireState = 0;
 
         //set position and rotation of the gun:
@@ -33,10 +34,10 @@ class Gun extends Model{
         
 
         //add event listeners:
-        window.addEventListener("click", (e: MouseEvent) => this.mouseHandler(e) );
+        window.addEventListener("click", () => this.mouseHandler() );
     }
 
-    private mouseHandler(e: MouseEvent){
+    private mouseHandler(){
         if(this.fireState == 0){
             this.fireState = 1;
         }
@@ -44,7 +45,7 @@ class Gun extends Model{
 
     }
 
-    public update(delta:number):void{
+    public update():void{
         if(!this.player.isDead){
 
             //firing a bullet:

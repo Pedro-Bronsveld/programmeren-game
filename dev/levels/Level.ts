@@ -6,7 +6,7 @@ class Level{
     private ambientLight: THREE.AmbientLight;
     private propSkyColor: RgbColor;
     private propGame: Game;
-    private camera: PlayerCamera;
+    private playerCamera: PlayerCamera;
     private propPlayer: Player;
     readonly noCollisionModels: Array<string>;
     private noCollisionNames: Array<string>;
@@ -25,9 +25,9 @@ class Level{
         this.lights = new Array<Light>();
         
         this.propPlayer = new Player(this);
-        this.camera = new PlayerCamera(this, this.player);
-        this.camera.assignToRenderer(this.propGame.renderer);
-        this.scene.add(this.camera.camera);
+        this.playerCamera = new PlayerCamera(this, this.player);
+        this.playerCamera.assignToRenderer(this.propGame.renderer);
+        this.scene.add(this.playerCamera.camera);
         
         //create an ambient light:
         this.ambientLight = new THREE.AmbientLight( 0xffffff );
@@ -84,15 +84,15 @@ class Level{
     }
 
     public get cam():PlayerCamera{
-        return this.camera;
+        return this.playerCamera;
     }
 
-    public addModelName(name: string, model:Model){
+    public addModelOnly(model:Model){
         this.models.push(model);
     }
     public addModel(model: Model): void{
         //add model to gameobjects array:
-        this.addModelName(model.name, model);
+        this.addModelOnly(model);
         this.scene.add( model.getMesh() );
     }
 
@@ -160,10 +160,10 @@ class Level{
 
         //update lights:
         for(let light of this.lights ){
-            light.update(delta);
+            light.update();
         }
 
-        this.camera.update();
+        this.playerCamera.update();
         
     }
 }

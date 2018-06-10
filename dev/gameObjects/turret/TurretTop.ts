@@ -4,7 +4,7 @@ class TurretTop extends Model{
     private turretBase: TurretBase;
     private intersectsFilter: IntersectsFilter;
     private targetOffset: THREE.Vector3;
-    private turnSpeed: number;
+    //private turnSpeed: number;
     
     private health: number;
     private destroyed: boolean;
@@ -16,7 +16,7 @@ class TurretTop extends Model{
         this.cooldown = 1;
         this.intersectsFilter = new IntersectsFilter(this.level, ["practice_target"], [this.name, this.turretBase.name]);
         this.targetOffset = new THREE.Vector3(0, 3.5, 0);
-        this.turnSpeed = Math.PI;
+        //this.turnSpeed = Math.PI;
 
         this.health = 100;
         this.destroyed = false;
@@ -92,9 +92,12 @@ class TurretTop extends Model{
     public update(delta:number):void{
         super.update(delta);
 
-        if(!this.destroyed && !this.level.player.isDead){
-            let newTarget: THREE.Vector3 = this.level.player.posVector;
-            newTarget.y += this.targetOffset.y;
+        let newTarget: THREE.Vector3 = this.level.player.posVector;
+        newTarget.y += this.targetOffset.y;
+
+        let distanceToTarget:number = this.posVector.distanceTo( newTarget );
+
+        if(!this.destroyed && !this.level.player.isDead && distanceToTarget < 300){
     
             let direction: THREE.Vector3 = new THREE.Vector3();
             direction.subVectors(newTarget, this.posVector).normalize();
@@ -111,8 +114,6 @@ class TurretTop extends Model{
             if(intersects.length > 0 && intersects[0].object.name == "player"){
                 //target is in line of sight
                 this.target = newTarget;
-                
-                let rYstart: number = this.rY;
     
                 this.mesh.lookAt(this.target);
     

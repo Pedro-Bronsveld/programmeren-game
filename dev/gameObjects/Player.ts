@@ -7,7 +7,6 @@ class Player extends MobileModel{
     private rightKey: number;
     private jumpKey: number;
     private cameraRotation: number;
-    private gun: Gun;
 
     //key states:
     private forward: boolean;
@@ -68,7 +67,7 @@ class Player extends MobileModel{
         //window.addEventListener("mousemove", this.mouseHandler);
 
         //create gun:
-        this.gun = new Gun(this.level, this);
+        new Gun(this.level, this);
 
         if(this.hasCollision){
             //create collision box:
@@ -109,6 +108,7 @@ class Player extends MobileModel{
     }
 
     private keyDownHandler = (e: KeyboardEvent):void => {
+        e.stopPropagation();
         if(!e.repeat){
             switch(e.keyCode){
                 case this.upKey:
