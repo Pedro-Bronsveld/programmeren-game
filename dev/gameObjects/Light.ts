@@ -6,16 +6,23 @@ class Light extends GameObject{
         super(level, model, "Light");
         this.lightSource = lightSource;
 
+        let showShadowHelper:boolean = false;
+
         //convert rgb to hex color:
         let color : number = parseInt( "0x" + utils.toHEX(lightSource.data.color) );
         if(lightSource.data.type == "SUN"){
             //lamp is sun
             this.propLight = new THREE.DirectionalLight(color, lightSource.data.energy);
-            this.propLight.shadow.camera = new THREE.OrthographicCamera( -50, 50, 50, -50, 0.5, 200 );
-            this.propLight.target = this.level.player.getMesh();
-            //let camHelper : THREE.CameraHelper = new THREE.CameraHelper(this.light.shadow.camera);
-            //camHelper.name = "ShadowHelper";
-            //this.level.getScene().add(camHelper);
+            if(lightSource.data.cast_shadow){
+                this.propLight.shadow.camera = new THREE.OrthographicCamera( -100, 100, 100, -100, 0.5, 200 );
+                this.propLight.target = this.level.player.getMesh();
+                if(showShadowHelper){
+                    let camHelper : THREE.CameraHelper = new THREE.CameraHelper(this.light.shadow.camera);
+                    camHelper.name = "ShadowHelper";
+                    this.level.getScene().add(camHelper);
+                }
+            }
+            
             
         }
         else if(lightSource.data.type == "HEMI"){
@@ -36,8 +43,8 @@ class Light extends GameObject{
         this.propLight.castShadow = lightSource.data.cast_shadow;
         if(this.propLight.castShadow){
             //set shadow resolution:
-            this.propLight.shadow.mapSize.width = 500;
-            this.propLight.shadow.mapSize.height = 500;
+            this.propLight.shadow.mapSize.width = 1000;
+            this.propLight.shadow.mapSize.height = 1000;
         }
         this.propLight.position.set(lightSource.location.x, lightSource.location.y, lightSource.location.z);        
         

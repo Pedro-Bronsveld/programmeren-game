@@ -42,6 +42,8 @@ class MobileModel extends Model{
         let moveX:number = Math.abs(this.moving.sideways);
         let moveTotal:number = moveZ + moveX;
 
+        let direction: THREE.Vector2 = new THREE.Vector2(moveX, moveZ).normalize();
+
         if(this.collisionBox.collisionVisible){
             //set rotation for debugging collision box mesh:
             this.collisionBox.rX = -this.rX;
@@ -49,7 +51,7 @@ class MobileModel extends Model{
             this.collisionBox.rZ = -this.rZ;
         }
 
-        if(moveTotal > 0){            
+        if(moveTotal > 0){
 
             //caluclate amount to move forward and sideways:
             let dirZ:number = this.moving.forward / moveZ;
@@ -62,8 +64,10 @@ class MobileModel extends Model{
                 dirX = 0;
             }
 
-            let velocityZ = (moveZ/moveTotal) * dirZ * this.velocity * delta;
-            let velocityX = (moveX/moveTotal) * dirX * this.velocity * delta;
+            let velocityZ = direction.y * dirZ * this.velocity * delta;
+            let velocityX = direction.x * dirX * this.velocity * delta;
+
+            //console.log("x: " + velocityX + " z: " + velocityZ);
 
             //check collision in front and on the sides,
             //this is the maximim distance the model can be translated before hitting something:

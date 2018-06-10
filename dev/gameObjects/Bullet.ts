@@ -3,26 +3,40 @@
 class Bullet extends MobileModel{
 
     private despawnTimeout:number;
+    private timeAfterHit:number;
 
-    constructor(level: Level, gun: Gun, target:THREE.Vector3){
+    constructor(
+        level: Level,
+        worldMatrix: THREE.Matrix4,
+        target:THREE.Vector3,
+        barelOffset:THREE.Vector3,
+        ignoreModels:Array<string>=new Array<string>(),
+        ignoreNames:Array<string>=new Array<string>(),
+        color:number=0xff0000,
+        timeAfterHit:number=1
+        ){
         super(level, "bullet");
         
         this.hasCollision = true;
-        this.collisionBox = new CollisionBox(this, 1, 0.9, 6, 0, 0, -1.5, 5, false, true, new THREE.Vector3(1,1,1) );
+        this.collisionBox = new CollisionBox(this, 1, 0.9, 6, 0, 0, -1.5, 5, false, true, new THREE.Vector3(1,1,1), true, ignoreModels, ignoreNames);
 
         //change material of bullet:
-        var bulletMaterial = new THREE.MeshBasicMaterial( { color: 0xff0000 } );
+        var bulletMaterial = new THREE.MeshBasicMaterial( { color: color } );
         this.mesh.material = bulletMaterial;
 
-        //time in seconds before bullet despawns:
+        //time before bullet despawns after hitting something in seconds.
+        this.timeAfterHit = timeAfterHit;
+
+        //time in seconds before bullet despawns without hitting anything:
         this.despawnTimeout = 5;
 
         //move bullet to barrel of gun:
         let position: THREE.Vector3 = new THREE.Vector3();
-        position.x = -5;
-        position.z = -0.75;
+        position.x = barelOffset.x;
+        position.y = barelOffset.y;
+        position.z = barelOffset.z;
 
-        position.applyMatrix4( gun.getWorldMatrix() ); 
+        position.applyMatrix4( worldMatrix ); 
         this.posVector = position;
 
         this.mesh.lookAt(target);
@@ -57,15 +71,17 @@ class Bullet extends MobileModel{
 
             //check for incomming colision:
             if(front.distance < amount && front.intersected){
-                amount = front.distance + 0.2;
-                //this.collided(front);
+                amount = front.distance + 0.5;
+                this.mesh.translateZ(amount);
+                this.collided(front);
+                return;
             }
 
             this.mesh.translateZ(amount);
 
         }
-        else if(this.despawnTimeout > 1){
-            this.despawnTimeout = 1;
+        else if(this.despawnTimeout > this.timeAfterHit){
+            this.despawnTimeout = this.timeAfterHit;
         }
 
     }
@@ -74,8 +90,8 @@ class Bullet extends MobileModel{
         //set movement to 0
         this.moving.forward = 0;
 
-        //set bullet to despawn after 1 second:
-        this.despawnTimeout = 1;
+        //set bullet to despawn after x seconds:
+        this.despawnTimeout = this.timeAfterHit;
 
         //tell model it was hit
         let model:Model = this.level.getModelByName(rayData.model.userData.uniqueName)!;

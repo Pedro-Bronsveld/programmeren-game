@@ -177,6 +177,7 @@ class PlayerCamera extends Camera {
         this.viewRotateY = 0;
         this.pointerLocked = false;
         this.renderElement = this.level.game.renderer.element;
+        this.intersectsFilter = new IntersectsFilter(undefined, [this.targetModel.name]);
         window.addEventListener("mousemove", this.mouseHandler);
         this.renderElement.requestPointerLock = this.renderElement.requestPointerLock;
         document.exitPointerLock = document.exitPointerLock;
@@ -196,15 +197,7 @@ class PlayerCamera extends Camera {
         let maxDistance = 200;
         let rayCaster = new THREE.Raycaster(this.camera.position, direction, 0, maxDistance);
         let intersects = rayCaster.intersectObjects(this.level.getScene().children);
-        let i = 0;
-        while (i < intersects.length) {
-            if (this.level.noCollisionModels.indexOf(intersects[i].object.name) != -1) {
-                intersects.splice(i, 1);
-            }
-            else {
-                i++;
-            }
-        }
+        intersects = this.intersectsFilter.check(intersects);
         if (intersects.length > 0) {
             return intersects[0].point;
         }
@@ -272,6 +265,7 @@ class PlayerCamera extends Camera {
 class Level {
     constructor(game, levelName) {
         this.propGame = game;
+        this.noCollisionModels = ["bullet", "gun", "ShadowHelper", "skybox"];
         this.scene = new THREE.Scene();
         this.propSkyColor = { r: 255, g: 255, b: 255 };
         this.models = new Array();
@@ -280,7 +274,6 @@ class Level {
         this.camera = new PlayerCamera(this, this.player);
         this.camera.assignToRenderer(this.propGame.renderer);
         this.scene.add(this.camera.camera);
-        this.noCollisionModels = ["player", "bullet", "gun", "ShadowHelper", "skybox"];
         this.ambientLight = new THREE.AmbientLight(0xffffff);
         this.scene.add(this.ambientLight);
         let levelSrcData = this.game.levelDataByName(levelName);
@@ -288,7 +281,10 @@ class Level {
         this.ambientLight.intensity = levelSrcData.environment_light;
         for (let key in levelSrcData.objects) {
             let obj = levelSrcData.objects[key];
-            if (obj.model == "practice_target") {
+            if (obj.model == "turret_base") {
+                new TurretBase(this, obj);
+            }
+            else if (obj.model == "practice_target") {
                 new PracticeTarget(this, obj);
             }
             else if (obj.type == 'MESH') {
@@ -662,6 +658,7 @@ class MobileModel extends Model {
         let moveZ = Math.abs(this.moving.forward);
         let moveX = Math.abs(this.moving.sideways);
         let moveTotal = moveZ + moveX;
+        let direction = new THREE.Vector2(moveX, moveZ).normalize();
         if (this.collisionBox.collisionVisible) {
             this.collisionBox.rX = -this.rX;
             this.collisionBox.rY = -this.rY;
@@ -676,8 +673,8 @@ class MobileModel extends Model {
             if (isNaN(dirX)) {
                 dirX = 0;
             }
-            let velocityZ = (moveZ / moveTotal) * dirZ * this.velocity * delta;
-            let velocityX = (moveX / moveTotal) * dirX * this.velocity * delta;
+            let velocityZ = direction.y * dirZ * this.velocity * delta;
+            let velocityX = direction.x * dirX * this.velocity * delta;
             let front = this.collisionBox.front().distance;
             let back = this.collisionBox.back().distance;
             let right = this.collisionBox.right().distance;
@@ -747,17 +744,19 @@ class MobileModel extends Model {
     }
 }
 class Bullet extends MobileModel {
-    constructor(level, gun, target) {
+    constructor(level, worldMatrix, target, barelOffset, ignoreModels = new Array(), ignoreNames = new Array(), color = 0xff0000, timeAfterHit = 1) {
         super(level, "bullet");
         this.hasCollision = true;
-        this.collisionBox = new CollisionBox(this, 1, 0.9, 6, 0, 0, -1.5, 5, false, true, new THREE.Vector3(1, 1, 1));
-        var bulletMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        this.collisionBox = new CollisionBox(this, 1, 0.9, 6, 0, 0, -1.5, 5, false, true, new THREE.Vector3(1, 1, 1), true, ignoreModels, ignoreNames);
+        var bulletMaterial = new THREE.MeshBasicMaterial({ color: color });
         this.mesh.material = bulletMaterial;
+        this.timeAfterHit = timeAfterHit;
         this.despawnTimeout = 5;
         let position = new THREE.Vector3();
-        position.x = -5;
-        position.z = -0.75;
-        position.applyMatrix4(gun.getWorldMatrix());
+        position.x = barelOffset.x;
+        position.y = barelOffset.y;
+        position.z = barelOffset.z;
+        position.applyMatrix4(worldMatrix);
         this.posVector = position;
         this.mesh.lookAt(target);
         this.moving.forward = 1;
@@ -776,17 +775,20 @@ class Bullet extends MobileModel {
             }
             let amount = this.velocity * delta;
             if (front.distance < amount && front.intersected) {
-                amount = front.distance + 0.2;
+                amount = front.distance + 0.5;
+                this.mesh.translateZ(amount);
+                this.collided(front);
+                return;
             }
             this.mesh.translateZ(amount);
         }
-        else if (this.despawnTimeout > 1) {
-            this.despawnTimeout = 1;
+        else if (this.despawnTimeout > this.timeAfterHit) {
+            this.despawnTimeout = this.timeAfterHit;
         }
     }
     collided(rayData) {
         this.moving.forward = 0;
-        this.despawnTimeout = 1;
+        this.despawnTimeout = this.timeAfterHit;
         let model = this.level.getModelByName(rayData.model.userData.uniqueName);
         model.hit();
     }
@@ -825,7 +827,8 @@ class Gun extends Model {
             this.fireState = 3;
         }
         else if (this.fireState == 3) {
-            new Bullet(this.level, this, this.level.cam.getTarget());
+            let targetVector = this.level.cam.getTarget();
+            new Bullet(this.level, this.getWorldMatrix(), targetVector, new THREE.Vector3(-5, -0.75, 0), [this.player.modelName], undefined, 0xff0000, 0.5);
             this.fireState = 0;
         }
     }
@@ -834,11 +837,19 @@ class Light extends GameObject {
     constructor(level, model, lightSource = new LightSource()) {
         super(level, model, "Light");
         this.lightSource = lightSource;
+        let showShadowHelper = false;
         let color = parseInt("0x" + utils.toHEX(lightSource.data.color));
         if (lightSource.data.type == "SUN") {
             this.propLight = new THREE.DirectionalLight(color, lightSource.data.energy);
-            this.propLight.shadow.camera = new THREE.OrthographicCamera(-50, 50, 50, -50, 0.5, 200);
-            this.propLight.target = this.level.player.getMesh();
+            if (lightSource.data.cast_shadow) {
+                this.propLight.shadow.camera = new THREE.OrthographicCamera(-100, 100, 100, -100, 0.5, 200);
+                this.propLight.target = this.level.player.getMesh();
+                if (showShadowHelper) {
+                    let camHelper = new THREE.CameraHelper(this.light.shadow.camera);
+                    camHelper.name = "ShadowHelper";
+                    this.level.getScene().add(camHelper);
+                }
+            }
         }
         else if (lightSource.data.type == "HEMI") {
             let horizon_color = parseInt("0x" + utils.toHEX(this.propLevel.skyColor));
@@ -852,8 +863,8 @@ class Light extends GameObject {
         }
         this.propLight.castShadow = lightSource.data.cast_shadow;
         if (this.propLight.castShadow) {
-            this.propLight.shadow.mapSize.width = 500;
-            this.propLight.shadow.mapSize.height = 500;
+            this.propLight.shadow.mapSize.width = 1000;
+            this.propLight.shadow.mapSize.height = 1000;
         }
         this.propLight.position.set(lightSource.location.x, lightSource.location.y, lightSource.location.z);
         this.propLevel.addLight(this);
@@ -1010,7 +1021,7 @@ class Player extends MobileModel {
         document.addEventListener("keyup", this.keyUpHandler);
         this.gun = new Gun(this.level, this);
         if (this.hasCollision) {
-            this.collisionBox = new CollisionBox(this, 2, 7.5, 2, 0, 7.5 / 2, 0, 5, true, false, new THREE.Vector3(1, 2, 1));
+            this.collisionBox = new CollisionBox(this, 2, 7.5, 2, 0, 7.5 / 2, 0, 5, true, false, new THREE.Vector3(1, 2, 1), true, [this.modelName, "turret_top"]);
         }
         this.playAction("idle");
         this.actionTimeScale("walk", 1.7);
@@ -1095,10 +1106,12 @@ class PracticeTarget extends Model {
     }
 }
 class CollisionBox {
-    constructor(model, sizeX = 0, sizeY = 0, sizeZ = 0, offsetX = 0, offsetY = 0, offsetZ = 0, extraDistance = 1, gravity = false, rotationEnabled = false, givenSegments = new THREE.Vector3(), centerVertex = true) {
+    constructor(model, sizeX = 0, sizeY = 0, sizeZ = 0, offsetX = 0, offsetY = 0, offsetZ = 0, extraDistance = 1, gravity = false, rotationEnabled = false, givenSegments = new THREE.Vector3(), centerVertex = true, ignoreModels = new Array(), ignoreNames = new Array()) {
         this.model = model;
         this.rotationEnabled = rotationEnabled;
         this.collisionVisible = false;
+        ignoreModels.push(this.model.name);
+        this.intersectsFilter = new IntersectsFilter(ignoreModels, ignoreNames);
         this.extraDistance = extraDistance;
         this.sideZ = new THREE.PlaneGeometry(0, 0);
         this.sideX = new THREE.PlaneGeometry(0, 0);
@@ -1242,11 +1255,14 @@ class CollisionBox {
                 let distance;
                 distance = side.size / 2 + this.extraDistance;
                 if (this.rotationEnabled) {
-                    direction.applyQuaternion(this.model.getMesh().quaternion);
+                    direction.applyAxisAngle(new THREE.Vector3(1, 0, 0), this.model.rX);
+                    direction.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.model.rY);
+                    direction.applyAxisAngle(new THREE.Vector3(0, 0, 1), this.model.rZ);
+                    geometry.rotateX(this.model.rX);
+                    geometry.rotateY(this.model.rY);
+                    geometry.rotateZ(this.model.rZ);
                 }
                 geometry.translate(this.model.pX, this.model.pY, this.model.pZ);
-                let skipObjects = [];
-                skipObjects.push(this.model.name);
                 let shortestDistance = distance;
                 let closestPoint = new THREE.Vector3();
                 let closestModel = new THREE.Object3D();
@@ -1255,15 +1271,14 @@ class CollisionBox {
                 for (let vertex of geometry.vertices) {
                     let raycaster = new THREE.Raycaster(vertex, direction, 0, distance);
                     let intersects = raycaster.intersectObjects(this.model.level.getScene().children);
+                    intersects = this.intersectsFilter.check(intersects);
                     for (let intersect of intersects) {
-                        if (skipObjects.indexOf(intersect.object.name) == -1 && this.model.level.noCollisionModels.indexOf(intersect.object.name) == -1) {
-                            if (intersect.distance < shortestDistance) {
-                                shortestDistance = intersect.distance;
-                                closestPoint = intersect.point;
-                                closestModel = intersect.object;
-                                intersected = true;
-                                faceIndex = intersect.faceIndex;
-                            }
+                        if (intersect.distance < shortestDistance) {
+                            shortestDistance = intersect.distance;
+                            closestPoint = intersect.point;
+                            closestModel = intersect.object;
+                            intersected = true;
+                            faceIndex = intersect.faceIndex;
                         }
                     }
                 }
@@ -1285,6 +1300,76 @@ class CollisionSide {
         this.geometry = geometry;
         this.direction = direction;
         this.size = size;
+    }
+}
+class IntersectsFilter {
+    constructor(ignoreModels = new Array(), ignoreNames = new Array()) {
+        let alwaysIgnoreModels = ["bullet", "gun", "ShadowHelper", "skybox"];
+        this.ignoreModels = ignoreModels.concat(alwaysIgnoreModels);
+        this.ignoreNames = ignoreNames;
+    }
+    check(intersects) {
+        let fileteredIntersects = new Array();
+        for (let intersect of intersects) {
+            if (this.ignoreModels.indexOf(intersect.object.name) == -1 && this.ignoreNames.indexOf(intersect.object.userData.uniqueName) == -1) {
+                fileteredIntersects.push(intersect);
+            }
+        }
+        return fileteredIntersects;
+    }
+}
+class TurretBase extends Model {
+    constructor(level, modelSource = new ModelSource()) {
+        super(level, "turret_base", modelSource);
+        this.top = new TurretTop(level, this);
+        let topPos = this.posVector;
+        topPos.y += 8.7;
+        this.top.posVector = topPos;
+    }
+}
+class TurretTop extends Model {
+    constructor(level, turretBase) {
+        super(level, "turret_top");
+        this.turretBase = turretBase;
+        this.target = new THREE.Vector3();
+        this.cooldown = 1;
+        this.intersectsFilter = new IntersectsFilter(undefined, [this.name, this.turretBase.name]);
+        this.targetOffset = new THREE.Vector3(0, 3.5, 0);
+    }
+    update(delta) {
+        let newTarget = this.level.player.posVector;
+        newTarget.y += this.targetOffset.y;
+        let direction = new THREE.Vector3();
+        direction.subVectors(newTarget, this.posVector).normalize();
+        let raycaster = new THREE.Raycaster(this.posVector, direction, 0, 200);
+        let intersects = raycaster.intersectObjects(this.level.getScene().children);
+        intersects = this.intersectsFilter.check(intersects);
+        if (this.cooldown > 0) {
+            this.cooldown -= delta;
+        }
+        if (intersects.length > 0 && intersects[0].object.name == "player") {
+            this.target = newTarget;
+            let rYstart = this.rY;
+            this.mesh.lookAt(this.target);
+        }
+        if (this.cooldown <= 0) {
+            this.fire();
+            this.cooldown = 1;
+        }
+    }
+    turnToTarget() {
+        let target = new THREE.Vector3();
+        target.subVectors(this.target, this.posVector);
+        function calcAngle(x, y) {
+            return Math.atan2(y, x);
+        }
+        var position = new THREE.Vector3();
+        var quaternion = new THREE.Quaternion();
+        var scale = new THREE.Vector3();
+        this.getWorldMatrix().decompose(position, quaternion, scale);
+    }
+    fire() {
+        new Bullet(this.level, this.mesh.matrixWorld, this.target, new THREE.Vector3(0, 0, 7), undefined, [this.name, this.turretBase.name], 0xccff00, 0.05);
     }
 }
 //# sourceMappingURL=main.js.map

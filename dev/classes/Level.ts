@@ -12,6 +12,10 @@ class Level{
 
     constructor(game: Game, levelName: string){
         this.propGame = game;
+
+        //model names always ignored by collision boxes:
+        this.noCollisionModels = ["bullet", "gun", "ShadowHelper", "skybox"];
+
         //create three js scene
         this.scene = new THREE.Scene();
         this.propSkyColor = {r: 255, g: 255, b:255};
@@ -22,9 +26,6 @@ class Level{
         this.camera = new PlayerCamera(this, this.player);
         this.camera.assignToRenderer(this.propGame.renderer);
         this.scene.add(this.camera.camera);
-
-        //model names ignored by collision boxes:
-        this.noCollisionModels = ["player", "bullet", "gun", "ShadowHelper", "skybox"];
         
         //create an ambient light:
         this.ambientLight = new THREE.AmbientLight( 0xffffff );
@@ -40,8 +41,13 @@ class Level{
         for(let key in levelSrcData.objects){
             let obj : ObjectSource = levelSrcData.objects[key];
             
-            //spawning practice targets:
-            if(obj.model == "practice_target"){
+            //check if the model has its own class:
+            if(obj.model == "turret_base"){
+                //turret
+                new TurretBase(this, obj);
+            }
+            else if(obj.model == "practice_target"){
+                //practice target
                 new PracticeTarget(this, obj);
             }
             else if(obj.type == 'MESH'){

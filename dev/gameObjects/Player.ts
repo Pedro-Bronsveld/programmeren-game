@@ -61,7 +61,7 @@ class Player extends MobileModel{
 
         if(this.hasCollision){
             //create collision box:
-            this.collisionBox = new CollisionBox(this, 2, 7.5, 2, 0, 7.5/2, 0, 5, true, false, new THREE.Vector3(1,2,1) );
+            this.collisionBox = new CollisionBox(this, 2, 7.5, 2, 0, 7.5/2, 0, 5, true, false, new THREE.Vector3(1,2,1), true, [this.modelName, "turret_top"] );
         }
 
         //set animation:

@@ -16,12 +16,33 @@ class CollisionBox{
     private box:THREE.LineSegments;
     readonly collisionVisible: boolean;
 
-    constructor(model:MobileModel, sizeX:number=0, sizeY:number=0, sizeZ:number=0, offsetX:number=0, offsetY:number=0, offsetZ:number=0, extraDistance:number=1, gravity:boolean=false, rotationEnabled:boolean=false, givenSegments:THREE.Vector3=new THREE.Vector3(), centerVertex:boolean=true){
+    private intersectsFilter: IntersectsFilter;
+
+    constructor(
+        model:MobileModel, 
+        sizeX:number=0, 
+        sizeY:number=0, 
+        sizeZ:number=0, 
+        offsetX:number=0, 
+        offsetY:number=0, 
+        offsetZ:number=0, 
+        extraDistance:number=1, 
+        gravity:boolean=false, 
+        rotationEnabled:boolean=false, 
+        givenSegments:THREE.Vector3=new THREE.Vector3(), 
+        centerVertex:boolean=true,
+        ignoreModels:Array<string>=new Array<string>(),
+        ignoreNames:Array<string>=new Array<string>()
+    ){
         this.model = model;
         this.rotationEnabled = rotationEnabled;
 
         //for development:
         this.collisionVisible = false;
+
+        //filter for models and unique names that should be ignored when checking for colision:
+        ignoreModels.push(this.model.name);
+        this.intersectsFilter = new IntersectsFilter(ignoreModels, ignoreNames);
 
         //how far the raycaster rays should check beyond the collision box:
         this.extraDistance = extraDistance;
@@ -210,14 +231,18 @@ class CollisionBox{
                 //apply transformations to direction and geometry:
                 if(this.rotationEnabled){
                     //direction.applyAxisAngle(new THREE.Vector3(0,1,0), this.model.rY);
-                    direction.applyQuaternion(this.model.getMesh().quaternion);
-                }
-                //geometry.applyMatrix(this.model.getMesh().matrixWorld);
-                geometry.translate( this.model.pX, this.model.pY, this.model.pZ );
+                    //direction.applyQuaternion(this.model.getMesh().quaternion);
+                    direction.applyAxisAngle(new THREE.Vector3(1,0,0), this.model.rX);
+                    direction.applyAxisAngle(new THREE.Vector3(0,1,0), this.model.rY);
+                    direction.applyAxisAngle(new THREE.Vector3(0,0,1), this.model.rZ);
 
-                //objects names to skip when ray casting:
-                let skipObjects: Array<string> = [];
-                skipObjects.push(this.model.name);
+                    geometry.rotateX(this.model.rX);
+                    geometry.rotateY(this.model.rY);
+                    geometry.rotateZ(this.model.rZ);
+                }               
+
+                geometry.translate( this.model.pX, this.model.pY, this.model.pZ );
+                
 
                 //variable for the hortest distance detected by raycasters:
                 let shortestDistance: number = distance;
@@ -231,18 +256,17 @@ class CollisionBox{
                     let raycaster = new THREE.Raycaster(vertex , direction, 0, distance );
                     //get array with objects intersected by raycaster:
                     let intersects = raycaster.intersectObjects( this.model.level.getScene().children);
+                    //filter intersects:
+                    intersects = this.intersectsFilter.check(intersects);
                     //loop through intersected objects:
                     for(let intersect of intersects){
-                        //check if object should be skipped:
-                        if(skipObjects.indexOf(intersect.object.name) == -1 && this.model.level.noCollisionModels.indexOf(intersect.object.name) == -1 ){
-                            //check if the distance to the object is shorter than the shortest measured distance:
-                            if(intersect.distance < shortestDistance){
-                                shortestDistance = intersect.distance;
-                                closestPoint = intersect.point;
-                                closestModel = intersect.object;
-                                intersected = true;
-                                faceIndex = intersect.faceIndex;
-                            }
+                        //check if the distance to the object is shorter than the shortest measured distance:
+                        if(intersect.distance < shortestDistance){
+                            shortestDistance = intersect.distance;
+                            closestPoint = intersect.point;
+                            closestModel = intersect.object;
+                            intersected = true;
+                            faceIndex = intersect.faceIndex;
                         }
                     }
                 }
