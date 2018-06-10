@@ -45,21 +45,24 @@ class Gun extends Model{
     }
 
     public update(delta:number):void{
-        //firing a bullet:
-        if(this.fireState == 1){
-            //rotate player to right direction:
-            this.player.rotateToView();
-            this.fireState = 2;
-        }
-        else if(this.fireState == 2){
-            //it takes another frame for the world matrix to update for whatever reason...
-            this.fireState = 3
-        }
-        else if(this.fireState == 3){
-            //create bullet:
-            let targetVector: THREE.Vector3 = this.level.cam.getTarget();
-            new Bullet(this.level, this.getWorldMatrix(), targetVector, new THREE.Vector3(-5, -0.75, 0), [this.player.modelName], undefined, 0xff0000, 0.5);
-            this.fireState = 0;
+        if(!this.player.isDead){
+
+            //firing a bullet:
+            if(this.fireState == 1){
+                //rotate player to right direction:
+                this.player.rotateToView();
+                this.fireState = 2;
+            }
+            else if(this.fireState == 2){
+                //it takes another frame for the world matrix to update for whatever reason...
+                this.fireState = 3
+            }
+            else if(this.fireState == 3){
+                //create bullet:
+                let targetVector: THREE.Vector3 = this.level.cam.getTarget();
+                new Bullet(this.level, this.getWorldMatrix(), targetVector, new THREE.Vector3(-5, -0.40, 0), [this.player.modelName], undefined, 0xff0000, 0.5);
+                this.fireState = 0;
+            }
         }
     }
 

@@ -9,4 +9,8 @@ class TurretBase extends Model{
         topPos.y += 8.7;
         this.top.posVector = topPos;
     }
+
+    public hit():void{
+        this.top.hit();
+    }
 }

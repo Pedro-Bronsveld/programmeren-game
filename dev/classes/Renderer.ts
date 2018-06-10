@@ -14,7 +14,7 @@ class Renderer{
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
         //add canvas to body:
-        document.body.appendChild( this.renderer.domElement );
+        document.getElementsByTagName("game")[0].appendChild( this.renderer.domElement );
 
         //resize when window size changes:
         window.addEventListener("resize", this.setSize);

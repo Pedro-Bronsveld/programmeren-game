@@ -4,50 +4,45 @@ class TurretTop extends Model{
     private turretBase: TurretBase;
     private intersectsFilter: IntersectsFilter;
     private targetOffset: THREE.Vector3;
+    private turnSpeed: number;
+    
+    private health: number;
+    private destroyed: boolean;
+
     constructor(level: Level, turretBase: TurretBase){
         super(level, "turret_top");
         this.turretBase = turretBase;
         this.target = new THREE.Vector3();
         this.cooldown = 1;
-        this.intersectsFilter = new IntersectsFilter(undefined, [this.name, this.turretBase.name]);
+        this.intersectsFilter = new IntersectsFilter(this.level, ["practice_target"], [this.name, this.turretBase.name]);
         this.targetOffset = new THREE.Vector3(0, 3.5, 0);
+        this.turnSpeed = Math.PI;
+
+        this.health = 100;
+        this.destroyed = false;
     }
 
-    public update(delta:number):void{
-
-        let newTarget: THREE.Vector3 = this.level.player.posVector;
-        newTarget.y += this.targetOffset.y;
-
-        let direction: THREE.Vector3 = new THREE.Vector3();
-        direction.subVectors(newTarget, this.posVector).normalize();
-
-        let raycaster: THREE.Raycaster = new THREE.Raycaster(this.posVector, direction, 0, 200);
-        let intersects: Array<THREE.Intersection> = raycaster.intersectObjects(this.level.getScene().children);
+    public hit():void{
+        if(this.health > 0){
+            this.health -= 10;
+        }
         
-        intersects = this.intersectsFilter.check(intersects);
+        if(this.health <= 0 && !this.destroyed){
+            this.destroyed = true;
 
-        if(this.cooldown > 0){
-            this.cooldown -= delta;
+            //set turret horizontal:
+            let target: THREE.Vector3 = new THREE.Vector3(this.level.player.posVector.x, this.pY, this.level.player.posVector.z );
+            this.mesh.lookAt(target);
+
+            //ignore collision of turret top from now on:
+            this.level.addNoCollisionName(this.name);
+
+            this.playAction("destroy", 0);
         }
-
-        if(intersects.length > 0 && intersects[0].object.name == "player"){
-            //target is in line of sight
-            this.target = newTarget;
-            
-            let rYstart: number = this.rY;
-
-            this.mesh.lookAt(this.target);
-
-        }
-
-        if(this.cooldown <= 0){
-            this.fire();
-            this.cooldown = 1;
-        }
-
     }
 
-    private turnToTarget():void{
+    /*
+    private turnToTarget(delta: number):void{
 
         let target:THREE.Vector3 = new THREE.Vector3();
         target.subVectors(this.target, this.posVector);
@@ -57,7 +52,12 @@ class TurretTop extends Model{
             return Math.atan2(y, x);
         }
 
-        /*
+        let rYstart = this.rY;
+
+        this.rX = 0;
+        this.rY = 0;
+        this.rZ = 0;
+
         //rotation on x axis:
         //calculate horizontal distance between turret and player:
         let distanceX:number = Math.abs(target.x);
@@ -65,25 +65,65 @@ class TurretTop extends Model{
         let distance:number = Math.sqrt( Math.pow(distanceX,2) + Math.pow(distanceZ,2) );
 
         let rotX:number = -calcAngle(distance, target.y);
-        this.rX = rotX;
+        //this.rX = rotX;
+        this.mesh.rotateOnWorldAxis(new THREE.Vector3(1,0,0), rotX);
+
+        
+
 
         //rotation on y axis:
         let rotY:number = calcAngle(-target.x, target.z) - Math.PI/2;
-        this.rY = rotY;
-        */
+        //this.rY = rotY;
+        
 
+        if(rYstart - this.rY > this.turnSpeed * delta){
+            this.
+        }
 
-        var position = new THREE.Vector3();
-        var quaternion = new THREE.Quaternion();
-        var scale = new THREE.Vector3();
-
-        this.getWorldMatrix().decompose( position, quaternion, scale );
-
+        
 
     }
+    */
 
     public fire():void{
         new Bullet(this.level, this.mesh.matrixWorld, this.target, new THREE.Vector3(0,0,7), undefined, [this.name, this.turretBase.name], 0xccff00, 0.05 );
+    }
+
+    public update(delta:number):void{
+        super.update(delta);
+
+        if(!this.destroyed && !this.level.player.isDead){
+            let newTarget: THREE.Vector3 = this.level.player.posVector;
+            newTarget.y += this.targetOffset.y;
+    
+            let direction: THREE.Vector3 = new THREE.Vector3();
+            direction.subVectors(newTarget, this.posVector).normalize();
+    
+            let raycaster: THREE.Raycaster = new THREE.Raycaster(this.posVector, direction, 0, 200);
+            let intersects: Array<THREE.Intersection> = raycaster.intersectObjects(this.level.getScene().children);
+            
+            intersects = this.intersectsFilter.check(intersects);
+    
+            if(this.cooldown > 0){
+                this.cooldown -= delta;
+            }
+    
+            if(intersects.length > 0 && intersects[0].object.name == "player"){
+                //target is in line of sight
+                this.target = newTarget;
+                
+                let rYstart: number = this.rY;
+    
+                this.mesh.lookAt(this.target);
+    
+            }
+    
+            if(this.cooldown <= 0){
+                this.fire();
+                this.cooldown = 1;
+            }
+        }
+
     }
 
 }

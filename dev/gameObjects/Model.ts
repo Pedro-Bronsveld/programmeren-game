@@ -6,7 +6,7 @@ class Model extends GameObject{
     private modelSource: ModelSource;
     protected actions: Actions;
     private mixer: THREE.AnimationMixer;
-    private playingAction: string;    
+    private playingAction: string;
 
     constructor(level: Level, meshName: string, modelSource: ModelSource = new ModelSource(), autoAdd:boolean=true){
         super(level, meshName, "Model");

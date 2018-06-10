@@ -5,6 +5,8 @@ class Game{
     private propLevel: Level;
     private propRenderer: Renderer;
     private propClock: THREE.Clock;
+    private propHud: Hud;
+    private propElement: HTMLElement;
 
     private levelsData: Array<LevelSrcData>;
     private meshesData: Array<MeshData>;
@@ -12,6 +14,7 @@ class Game{
     constructor(levelsData: Array<LevelSrcData>, meshesData: Array<MeshData>){
         this.levelsData = levelsData;
         this.meshesData = meshesData;
+        this.propElement = <HTMLElement>document.getElementsByTagName("game")[0];
 
         //renderer
         this.propRenderer = new Renderer();
@@ -23,6 +26,9 @@ class Game{
         //clock:
         this.propClock = new THREE.Clock();
 
+        //hud:
+        this.propHud = new Hud(this);
+
         //start gameloop
         this.gameloop();
     }
@@ -31,6 +37,8 @@ class Game{
     public get level():Level{ return this.propLevel };
     public get renderer():Renderer{ return this.propRenderer };
     public get clock():THREE.Clock{ return this.propClock };
+    public get element():HTMLElement{ return this.propElement };
+    public get hud():Hud{ return this.propHud };
 
     public getRenderer():Renderer{return this.propRenderer;}
 
@@ -63,6 +71,8 @@ class Game{
         this.level.update(delta);
         
         this.renderer.update();
+
+        this.hud.update();
 
         requestAnimationFrame( () => this.gameloop() );
     }

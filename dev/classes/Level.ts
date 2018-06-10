@@ -9,12 +9,14 @@ class Level{
     private camera: PlayerCamera;
     private propPlayer: Player;
     readonly noCollisionModels: Array<string>;
+    private noCollisionNames: Array<string>;
 
     constructor(game: Game, levelName: string){
         this.propGame = game;
 
         //model names always ignored by collision boxes:
         this.noCollisionModels = ["bullet", "gun", "ShadowHelper", "skybox"];
+        this.noCollisionNames = [];
 
         //create three js scene
         this.scene = new THREE.Scene();
@@ -97,6 +99,14 @@ class Level{
     public addLight(light: Light): void{
         this.lights.push(light);
         this.scene.add(light.light);
+    }
+
+    //add name for no collision:
+    public addNoCollisionName(name: string):void{
+        this.noCollisionNames.push(name);
+    }
+    public getNoCollisionNames():Array<string>{
+        return this.noCollisionNames;
     }
 
     //get model by name:

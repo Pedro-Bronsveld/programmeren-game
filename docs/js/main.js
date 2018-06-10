@@ -5,14 +5,17 @@ class Game {
             let delta = this.propClock.getDelta();
             this.level.update(delta);
             this.renderer.update();
+            this.hud.update();
             requestAnimationFrame(() => this.gameloop());
         };
         this.levelsData = levelsData;
         this.meshesData = meshesData;
+        this.propElement = document.getElementsByTagName("game")[0];
         this.propRenderer = new Renderer();
         this.propLevel = new Level(this, "level_1");
         this.propLevel.assignToRenderer(this.propRenderer);
         this.propClock = new THREE.Clock();
+        this.propHud = new Hud(this);
         this.gameloop();
     }
     get level() { return this.propLevel; }
@@ -20,6 +23,10 @@ class Game {
     get renderer() { return this.propRenderer; }
     ;
     get clock() { return this.propClock; }
+    ;
+    get element() { return this.propElement; }
+    ;
+    get hud() { return this.propHud; }
     ;
     getRenderer() { return this.propRenderer; }
     levelDataByName(name) {
@@ -177,7 +184,8 @@ class PlayerCamera extends Camera {
         this.viewRotateY = 0;
         this.pointerLocked = false;
         this.renderElement = this.level.game.renderer.element;
-        this.intersectsFilter = new IntersectsFilter(undefined, [this.targetModel.name]);
+        this.targetIntersectsFilter = new IntersectsFilter(this.level, undefined, [this.targetModel.name]);
+        this.cameraIntersectsFilter = new IntersectsFilter(this.level, ["turret_top"], [this.targetModel.name]);
         window.addEventListener("mousemove", this.mouseHandler);
         this.renderElement.requestPointerLock = this.renderElement.requestPointerLock;
         document.exitPointerLock = document.exitPointerLock;
@@ -197,7 +205,7 @@ class PlayerCamera extends Camera {
         let maxDistance = 200;
         let rayCaster = new THREE.Raycaster(this.camera.position, direction, 0, maxDistance);
         let intersects = rayCaster.intersectObjects(this.level.getScene().children);
-        intersects = this.intersectsFilter.check(intersects);
+        intersects = this.targetIntersectsFilter.check(intersects);
         if (intersects.length > 0) {
             return intersects[0].point;
         }
@@ -236,6 +244,7 @@ class PlayerCamera extends Camera {
         raycasterDirection = changeDirection(raycasterDirection, angleX, angleY);
         let rayCaster = new THREE.Raycaster(cameraTarget, raycasterDirection, 0, this.distance + 1);
         let intersects = rayCaster.intersectObjects(this.level.getScene().children);
+        intersects = this.cameraIntersectsFilter.check(intersects);
         for (let i = 0; i < intersects.length;) {
             if (intersects[i].object.userData.uniqueName == this.level.player.modelName) {
                 intersects.splice(i, 1);
@@ -266,6 +275,7 @@ class Level {
     constructor(game, levelName) {
         this.propGame = game;
         this.noCollisionModels = ["bullet", "gun", "ShadowHelper", "skybox"];
+        this.noCollisionNames = [];
         this.scene = new THREE.Scene();
         this.propSkyColor = { r: 255, g: 255, b: 255 };
         this.models = new Array();
@@ -324,6 +334,12 @@ class Level {
     addLight(light) {
         this.lights.push(light);
         this.scene.add(light.light);
+    }
+    addNoCollisionName(name) {
+        this.noCollisionNames.push(name);
+    }
+    getNoCollisionNames() {
+        return this.noCollisionNames;
     }
     getModelByName(name) {
         for (let model of this.models) {
@@ -436,7 +452,7 @@ class Renderer {
         this.setSize();
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        document.body.appendChild(this.renderer.domElement);
+        document.getElementsByTagName("game")[0].appendChild(this.renderer.domElement);
         window.addEventListener("resize", this.setSize);
         this.renderer.domElement.id = "renderer";
     }
@@ -639,6 +655,46 @@ class Utils {
     }
 }
 let utils = new Utils();
+class Healthbar {
+    constructor(game, hud) {
+        this.game = game;
+        this.hud = hud;
+        this.container = document.createElement("healthcontainer");
+        this.bar = document.createElement("healthbar");
+        this.container.appendChild(this.bar);
+        this.hud.element.appendChild(this.container);
+    }
+    update() {
+        let health = this.game.level.player.hp;
+        let maxHealth = this.game.level.player.maxHp;
+        let scaleX = health / maxHealth;
+        let translateX = -(1 - scaleX) * 100 / 2;
+        this.bar.style.transform = `translateX(${translateX}%) scaleX(${scaleX})`;
+    }
+}
+class Hud {
+    constructor(game) {
+        this.game = game;
+        this.propElement = document.createElement("hud");
+        this.game.element.appendChild(this.element);
+        this.isVisible = false;
+        this.healthbar = new Healthbar(this.game, this);
+        this.visible = true;
+    }
+    get visible() {
+        return this.isVisible;
+    }
+    set visible(visible) {
+        this.isVisible = visible;
+        this.element.dataset.visible = String(this.isVisible);
+    }
+    get element() {
+        return this.propElement;
+    }
+    update() {
+        this.healthbar.update();
+    }
+}
 class MobileModel extends Model {
     constructor(level, model, modelSource = new ModelSource(), autoAdd = true) {
         super(level, model, modelSource, autoAdd);
@@ -819,17 +875,19 @@ class Gun extends Model {
         }
     }
     update(delta) {
-        if (this.fireState == 1) {
-            this.player.rotateToView();
-            this.fireState = 2;
-        }
-        else if (this.fireState == 2) {
-            this.fireState = 3;
-        }
-        else if (this.fireState == 3) {
-            let targetVector = this.level.cam.getTarget();
-            new Bullet(this.level, this.getWorldMatrix(), targetVector, new THREE.Vector3(-5, -0.75, 0), [this.player.modelName], undefined, 0xff0000, 0.5);
-            this.fireState = 0;
+        if (!this.player.isDead) {
+            if (this.fireState == 1) {
+                this.player.rotateToView();
+                this.fireState = 2;
+            }
+            else if (this.fireState == 2) {
+                this.fireState = 3;
+            }
+            else if (this.fireState == 3) {
+                let targetVector = this.level.cam.getTarget();
+                new Bullet(this.level, this.getWorldMatrix(), targetVector, new THREE.Vector3(-5, -0.40, 0), [this.player.modelName], undefined, 0xff0000, 0.5);
+                this.fireState = 0;
+            }
         }
     }
 }
@@ -1004,6 +1062,10 @@ class Player extends MobileModel {
         this.cameraRotation = 0;
         this.hasCollision = true;
         this.hasGravity = true;
+        this.maxHealth = 100;
+        this.health = this.maxHealth;
+        this.health = 100;
+        this.dead = false;
         this.forward = false;
         this.backward = false;
         this.left = false;
@@ -1026,53 +1088,71 @@ class Player extends MobileModel {
         this.playAction("idle");
         this.actionTimeScale("walk", 1.7);
     }
+    get hp() { return this.health; }
+    get maxHp() { return this.maxHealth; }
+    get isDead() { return this.dead; }
+    ;
     afterMeshLoad() {
         super.afterMeshLoad();
     }
+    hit() {
+        if (this.health > 0) {
+            this.health -= 10;
+        }
+        if (this.health < 0) {
+            this.health = 0;
+        }
+        if (this.health <= 0) {
+            this.dead = true;
+            this.playAction("death", 0);
+        }
+    }
     moveUpdate(delta) {
-        if (this.moving.forward != 0 || this.moving.sideways != 0) {
-            this.rotateToView();
-            if (this.yVelocity > 0.1 && this.bottomDistance > 0.1) {
+        if (!this.dead) {
+            if (this.moving.forward != 0 || this.moving.sideways != 0) {
+                this.rotateToView();
+                if (this.yVelocity > 0.1 && this.bottomDistance > 0.1) {
+                    this.playAction("jump", 0);
+                }
+                else if (this.yVelocity <= 0.1 && this.bottomDistance > 0.5) {
+                    this.playAction("falling");
+                }
+                else if (this.moving.forward > 0 && this.moving.sideways == 0) {
+                    this.actionTimeScale("walk", 1.7);
+                    this.playAction("walk");
+                }
+                else if (this.moving.sideways == 0) {
+                    this.actionTimeScale("walk", -1.7);
+                    this.playAction("walk");
+                }
+                else if (this.moving.sideways > 0 && this.moving.forward >= 0) {
+                    this.actionTimeScale("strafe_left", 1.7);
+                    this.playAction("strafe_left");
+                }
+                else if (this.moving.sideways < 0 && this.moving.forward >= 0) {
+                    this.actionTimeScale("strafe_right", 1.7);
+                    this.playAction("strafe_right");
+                }
+                else if (this.moving.forward < 0 && this.moving.sideways > 0) {
+                    this.actionTimeScale("strafe_right", -1.7);
+                    this.playAction("strafe_right");
+                }
+                else if (this.moving.forward < 0 && this.moving.sideways < 0) {
+                    this.actionTimeScale("strafe_left", -1.7);
+                    this.playAction("strafe_left");
+                }
+            }
+            else if (this.yVelocity > 0.1 && this.bottomDistance > 0.1) {
                 this.playAction("jump", 0);
             }
-            else if (this.yVelocity <= 0.1 && this.bottomDistance > 0.5) {
+            else if (this.yVelocity < -1 && this.bottomDistance > 1) {
                 this.playAction("falling");
             }
-            else if (this.moving.forward > 0 && this.moving.sideways == 0) {
-                this.actionTimeScale("walk", 1.7);
-                this.playAction("walk");
+            else {
+                this.playAction("idle");
             }
-            else if (this.moving.sideways == 0) {
-                this.actionTimeScale("walk", -1.7);
-                this.playAction("walk");
-            }
-            else if (this.moving.sideways > 0 && this.moving.forward >= 0) {
-                this.actionTimeScale("strafe_left", 1.7);
-                this.playAction("strafe_left");
-            }
-            else if (this.moving.sideways < 0 && this.moving.forward >= 0) {
-                this.actionTimeScale("strafe_right", 1.7);
-                this.playAction("strafe_right");
-            }
-            else if (this.moving.forward < 0 && this.moving.sideways > 0) {
-                this.actionTimeScale("strafe_right", -1.7);
-                this.playAction("strafe_right");
-            }
-            else if (this.moving.forward < 0 && this.moving.sideways < 0) {
-                this.actionTimeScale("strafe_left", -1.7);
-                this.playAction("strafe_left");
-            }
+            super.moveUpdate(delta);
         }
-        else if (this.yVelocity > 0.1 && this.bottomDistance > 0.1) {
-            this.playAction("jump", 0);
-        }
-        else if (this.yVelocity < -1 && this.bottomDistance > 1) {
-            this.playAction("falling");
-        }
-        else {
-            this.playAction("idle");
-        }
-        super.moveUpdate(delta);
     }
     rotateToView() {
         let rotationY = this.level.cam.viewRotY;
@@ -1083,7 +1163,6 @@ class Player extends MobileModel {
     }
     update(delta) {
         super.update(delta);
-        this.gun.update(delta);
     }
 }
 class PracticeTarget extends Model {
@@ -1111,7 +1190,7 @@ class CollisionBox {
         this.rotationEnabled = rotationEnabled;
         this.collisionVisible = false;
         ignoreModels.push(this.model.name);
-        this.intersectsFilter = new IntersectsFilter(ignoreModels, ignoreNames);
+        this.intersectsFilter = new IntersectsFilter(this.model.level, ignoreModels, ignoreNames);
         this.extraDistance = extraDistance;
         this.sideZ = new THREE.PlaneGeometry(0, 0);
         this.sideX = new THREE.PlaneGeometry(0, 0);
@@ -1303,15 +1382,18 @@ class CollisionSide {
     }
 }
 class IntersectsFilter {
-    constructor(ignoreModels = new Array(), ignoreNames = new Array()) {
+    constructor(level, ignoreModels = new Array(), ignoreNames = new Array()) {
+        this.level = level;
         let alwaysIgnoreModels = ["bullet", "gun", "ShadowHelper", "skybox"];
         this.ignoreModels = ignoreModels.concat(alwaysIgnoreModels);
         this.ignoreNames = ignoreNames;
     }
     check(intersects) {
         let fileteredIntersects = new Array();
+        let ignoreNames = this.level.getNoCollisionNames();
+        ignoreNames = ignoreNames.concat(this.ignoreNames);
         for (let intersect of intersects) {
-            if (this.ignoreModels.indexOf(intersect.object.name) == -1 && this.ignoreNames.indexOf(intersect.object.userData.uniqueName) == -1) {
+            if (this.ignoreModels.indexOf(intersect.object.name) == -1 && ignoreNames.indexOf(intersect.object.userData.uniqueName) == -1) {
                 fileteredIntersects.push(intersect);
             }
         }
@@ -1326,6 +1408,9 @@ class TurretBase extends Model {
         topPos.y += 8.7;
         this.top.posVector = topPos;
     }
+    hit() {
+        this.top.hit();
+    }
 }
 class TurretTop extends Model {
     constructor(level, turretBase) {
@@ -1333,43 +1418,50 @@ class TurretTop extends Model {
         this.turretBase = turretBase;
         this.target = new THREE.Vector3();
         this.cooldown = 1;
-        this.intersectsFilter = new IntersectsFilter(undefined, [this.name, this.turretBase.name]);
+        this.intersectsFilter = new IntersectsFilter(this.level, ["practice_target"], [this.name, this.turretBase.name]);
         this.targetOffset = new THREE.Vector3(0, 3.5, 0);
+        this.turnSpeed = Math.PI;
+        this.health = 100;
+        this.destroyed = false;
     }
-    update(delta) {
-        let newTarget = this.level.player.posVector;
-        newTarget.y += this.targetOffset.y;
-        let direction = new THREE.Vector3();
-        direction.subVectors(newTarget, this.posVector).normalize();
-        let raycaster = new THREE.Raycaster(this.posVector, direction, 0, 200);
-        let intersects = raycaster.intersectObjects(this.level.getScene().children);
-        intersects = this.intersectsFilter.check(intersects);
-        if (this.cooldown > 0) {
-            this.cooldown -= delta;
+    hit() {
+        if (this.health > 0) {
+            this.health -= 10;
         }
-        if (intersects.length > 0 && intersects[0].object.name == "player") {
-            this.target = newTarget;
-            let rYstart = this.rY;
-            this.mesh.lookAt(this.target);
+        if (this.health <= 0 && !this.destroyed) {
+            this.destroyed = true;
+            let target = new THREE.Vector3(this.level.player.posVector.x, this.pY, this.level.player.posVector.z);
+            this.mesh.lookAt(target);
+            this.level.addNoCollisionName(this.name);
+            this.playAction("destroy", 0);
         }
-        if (this.cooldown <= 0) {
-            this.fire();
-            this.cooldown = 1;
-        }
-    }
-    turnToTarget() {
-        let target = new THREE.Vector3();
-        target.subVectors(this.target, this.posVector);
-        function calcAngle(x, y) {
-            return Math.atan2(y, x);
-        }
-        var position = new THREE.Vector3();
-        var quaternion = new THREE.Quaternion();
-        var scale = new THREE.Vector3();
-        this.getWorldMatrix().decompose(position, quaternion, scale);
     }
     fire() {
         new Bullet(this.level, this.mesh.matrixWorld, this.target, new THREE.Vector3(0, 0, 7), undefined, [this.name, this.turretBase.name], 0xccff00, 0.05);
+    }
+    update(delta) {
+        super.update(delta);
+        if (!this.destroyed && !this.level.player.isDead) {
+            let newTarget = this.level.player.posVector;
+            newTarget.y += this.targetOffset.y;
+            let direction = new THREE.Vector3();
+            direction.subVectors(newTarget, this.posVector).normalize();
+            let raycaster = new THREE.Raycaster(this.posVector, direction, 0, 200);
+            let intersects = raycaster.intersectObjects(this.level.getScene().children);
+            intersects = this.intersectsFilter.check(intersects);
+            if (this.cooldown > 0) {
+                this.cooldown -= delta;
+            }
+            if (intersects.length > 0 && intersects[0].object.name == "player") {
+                this.target = newTarget;
+                let rYstart = this.rY;
+                this.mesh.lookAt(this.target);
+            }
+            if (this.cooldown <= 0) {
+                this.fire();
+                this.cooldown = 1;
+            }
+        }
     }
 }
 //# sourceMappingURL=main.js.map

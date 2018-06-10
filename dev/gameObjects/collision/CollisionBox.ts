@@ -42,7 +42,7 @@ class CollisionBox{
 
         //filter for models and unique names that should be ignored when checking for colision:
         ignoreModels.push(this.model.name);
-        this.intersectsFilter = new IntersectsFilter(ignoreModels, ignoreNames);
+        this.intersectsFilter = new IntersectsFilter(this.model.level, ignoreModels, ignoreNames);
 
         //how far the raycaster rays should check beyond the collision box:
         this.extraDistance = extraDistance;

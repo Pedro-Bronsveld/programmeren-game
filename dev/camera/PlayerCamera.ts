@@ -7,7 +7,8 @@ class PlayerCamera extends Camera{
     private yOffset: number;
     private distance: number;
     private defaultDistance: number;
-    private intersectsFilter: IntersectsFilter;
+    private targetIntersectsFilter: IntersectsFilter;
+    private cameraIntersectsFilter: IntersectsFilter;
 
     constructor(level: Level, model: Player){
         super(level);
@@ -26,7 +27,8 @@ class PlayerCamera extends Camera{
         this.renderElement = this.level.game.renderer.element;
 
         //setup intersects filter:
-        this.intersectsFilter = new IntersectsFilter(undefined, [this.targetModel.name]);
+        this.targetIntersectsFilter = new IntersectsFilter(this.level ,undefined, [this.targetModel.name]);
+        this.cameraIntersectsFilter = new IntersectsFilter(this.level, ["turret_top"], [this.targetModel.name]);
 
         //add mouse event listeners:
         window.addEventListener("mousemove", this.mouseHandler);
@@ -66,7 +68,7 @@ class PlayerCamera extends Camera{
         let intersects: THREE.Intersection[] = rayCaster.intersectObjects( this.level.getScene().children );
 
         //filter intersects array:
-        intersects = this.intersectsFilter.check(intersects);
+        intersects = this.targetIntersectsFilter.check(intersects);
 
         if(intersects.length > 0){
             return intersects[0].point;
@@ -168,6 +170,9 @@ class PlayerCamera extends Camera{
         //create raycaster, origin point is the camera target vector:
         let rayCaster: THREE.Raycaster = new THREE.Raycaster(cameraTarget, raycasterDirection, 0, this.distance + 1);
         let intersects: Array<THREE.Intersection> = rayCaster.intersectObjects( this.level.getScene().children );
+
+        //filter intersects:
+        intersects = this.cameraIntersectsFilter.check(intersects);
 
         //ignore player model:
         for(let i = 0; i < intersects.length; ){

@@ -21,11 +21,22 @@ class Player extends MobileModel{
     readonly dirLeft: number;
     readonly dirRight: number;
 
+    //health
+    private health: number;
+    private maxHealth: number;
+    private dead: boolean;
+
     constructor(level: Level){
         super(level, "player");
         this.cameraRotation = 0;
         this.hasCollision = true;
         this.hasGravity = true;
+
+        //setup health
+        this.maxHealth = 100;
+        this.health = this.maxHealth;
+        this.health = 100;
+        this.dead = false;
 
         //set initial key states:
         this.forward = false;
@@ -73,9 +84,28 @@ class Player extends MobileModel{
 
     }
 
+    public get hp():number{ return this.health; }
+    public get maxHp():number{ return this.maxHealth; }
+    public get isDead():boolean{ return this.dead };
+
     protected afterMeshLoad(){
         super.afterMeshLoad();
 
+    }
+
+    public hit(){
+        if(this.health > 0){
+            this.health -= 10;
+        }
+        if(this.health < 0){
+            this.health = 0;
+        }
+
+        if(this.health <= 0){
+            //dead:
+            this.dead = true;
+            this.playAction("death", 0);
+        }
     }
 
     private keyDownHandler = (e: KeyboardEvent):void => {
@@ -163,67 +193,71 @@ class Player extends MobileModel{
 
     protected moveUpdate(delta: number){
 
-        if(this.moving.forward != 0 || this.moving.sideways != 0){
-            //player is moving
-            this.rotateToView();
-
-            //determine animation to play
-
-            if(this.yVelocity > 0.1 && this.bottomDistance > 0.1){
+        if(!this.dead){
+            
+            if(this.moving.forward != 0 || this.moving.sideways != 0){
+                //player is moving
+                this.rotateToView();
+    
+                //determine animation to play
+    
+                if(this.yVelocity > 0.1 && this.bottomDistance > 0.1){
+                    //jump 
+                    this.playAction("jump", 0);
+                }
+                else if(this.yVelocity <= 0.1 && this.bottomDistance > 0.5){
+                    //falling
+                    this.playAction("falling");
+                }
+                else if(this.moving.forward > 0 && this.moving.sideways == 0){
+                    //walking forwards
+                    this.actionTimeScale("walk", 1.7);
+                    this.playAction("walk");
+                }
+                else if(this.moving.sideways == 0){
+                    //walking backwards
+                    this.actionTimeScale("walk", -1.7);
+                    this.playAction("walk");
+                }
+                else if(this.moving.sideways > 0 && this.moving.forward >= 0){
+                    //walking left or forward and left
+                    this.actionTimeScale("strafe_left", 1.7);
+                    this.playAction("strafe_left");
+                }
+                else if(this.moving.sideways < 0 && this.moving.forward >= 0){
+                    //walking right or forward and left
+                    this.actionTimeScale("strafe_right", 1.7);
+                    this.playAction("strafe_right");
+                }
+                else if(this.moving.forward < 0 && this.moving.sideways > 0){
+                    //walking left and backwards:
+                    this.actionTimeScale("strafe_right", -1.7);
+                    this.playAction("strafe_right");
+                }
+                else if(this.moving.forward < 0 && this.moving.sideways < 0){
+                    //walking right and backwards:
+                    this.actionTimeScale("strafe_left", -1.7);
+                    this.playAction("strafe_left");
+                }
+    
+                
+            }
+            else if(this.yVelocity > 0.1 && this.bottomDistance > 0.1){
                 //jump 
                 this.playAction("jump", 0);
             }
-            else if(this.yVelocity <= 0.1 && this.bottomDistance > 0.5){
+            else if(this.yVelocity < -1 && this.bottomDistance > 1){
                 //falling
                 this.playAction("falling");
             }
-            else if(this.moving.forward > 0 && this.moving.sideways == 0){
-                //walking forwards
-                this.actionTimeScale("walk", 1.7);
-                this.playAction("walk");
+            else{
+                //player not moving
+                this.playAction("idle");
             }
-            else if(this.moving.sideways == 0){
-                //walking backwards
-                this.actionTimeScale("walk", -1.7);
-                this.playAction("walk");
-            }
-            else if(this.moving.sideways > 0 && this.moving.forward >= 0){
-                //walking left or forward and left
-                this.actionTimeScale("strafe_left", 1.7);
-                this.playAction("strafe_left");
-            }
-            else if(this.moving.sideways < 0 && this.moving.forward >= 0){
-                //walking right or forward and left
-                this.actionTimeScale("strafe_right", 1.7);
-                this.playAction("strafe_right");
-            }
-            else if(this.moving.forward < 0 && this.moving.sideways > 0){
-                //walking left and backwards:
-                this.actionTimeScale("strafe_right", -1.7);
-                this.playAction("strafe_right");
-            }
-            else if(this.moving.forward < 0 && this.moving.sideways < 0){
-                //walking right and backwards:
-                this.actionTimeScale("strafe_left", -1.7);
-                this.playAction("strafe_left");
-            }
-
-            
-        }
-        else if(this.yVelocity > 0.1 && this.bottomDistance > 0.1){
-            //jump 
-            this.playAction("jump", 0);
-        }
-        else if(this.yVelocity < -1 && this.bottomDistance > 1){
-            //falling
-            this.playAction("falling");
-        }
-        else{
-            //player not moving
-            this.playAction("idle");
+    
+            super.moveUpdate(delta);
         }
 
-        super.moveUpdate(delta);
 
     }
 
@@ -238,10 +272,9 @@ class Player extends MobileModel{
     }
 
     public update(delta: number){
-        
+            
         super.update(delta);
 
-        this.gun.update(delta);
     }
 
 }
