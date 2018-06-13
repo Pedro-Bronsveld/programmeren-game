@@ -16,7 +16,7 @@ class TurretTop extends Model{
         this.cooldown = 1;
         this.intersectsFilter = new IntersectsFilter(this.level, ["practice_target"], [this.name, this.turretBase.name]);
         this.targetOffset = new THREE.Vector3(0, 3.5, 0);
-        //this.turnSpeed = Math.PI;
+        // this.turnSpeed = Math.PI;
 
         this.playerSpotted = false;
 
@@ -32,11 +32,11 @@ class TurretTop extends Model{
         if(this.health <= 0 && !this.destroyed){
             this.destroyed = true;
 
-            //set turret horizontal:
+            // set turret horizontal
             let target: THREE.Vector3 = new THREE.Vector3(this.level.player.posVector.x, this.pY, this.level.player.posVector.z );
             this.mesh.lookAt(target);
 
-            //ignore collision of turret top from now on:
+            // ignore collision of turret top from now on
             this.level.addNoCollisionName(this.name);
 
             this.playAction("destroy", 0);
@@ -49,7 +49,7 @@ class TurretTop extends Model{
         let target:THREE.Vector3 = new THREE.Vector3();
         target.subVectors(this.target, this.posVector);
 
-        //calculate rotation:
+        // calculate rotation
         function calcAngle(x:number, y:number) {
             return Math.atan2(y, x);
         }
@@ -60,22 +60,22 @@ class TurretTop extends Model{
         this.rY = 0;
         this.rZ = 0;
 
-        //rotation on x axis:
-        //calculate horizontal distance between turret and player:
+        // rotation on x axis
+        // calculate horizontal distance between turret and player
         let distanceX:number = Math.abs(target.x);
         let distanceZ:number = Math.abs(target.z);
         let distance:number = Math.sqrt( Math.pow(distanceX,2) + Math.pow(distanceZ,2) );
 
         let rotX:number = -calcAngle(distance, target.y);
-        //this.rX = rotX;
+        // this.rX = rotX;
         this.mesh.rotateOnWorldAxis(new THREE.Vector3(1,0,0), rotX);
 
         
 
 
-        //rotation on y axis:
+        // rotation on y axis
         let rotY:number = calcAngle(-target.x, target.z) - Math.PI/2;
-        //this.rY = rotY;
+        // this.rY = rotY;
         
 
         if(rYstart - this.rY > this.turnSpeed * delta){
@@ -114,7 +114,7 @@ class TurretTop extends Model{
             }
     
             if(intersects.length > 0 && intersects[0].object.name == "player"){
-                //target is in line of sight
+                // target is in line of sight
                 this.target = newTarget;
     
                 this.mesh.lookAt(this.target);

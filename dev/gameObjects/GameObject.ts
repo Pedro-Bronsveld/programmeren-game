@@ -10,16 +10,16 @@ class GameObject{
         this.objectType = objectType;
     }
 
-    //get a name for the model that's not in use yet in a level:
+    // get a name for the model that's not in use yet in a level
     protected uniqueName = (name: string, level: Level): string => {
         let uniqueName: string = name;
         let num = 0;
         
-        //get all game object names already in use in the level:
+        // get all game object names already in use in the level
         let names = level.namesInUse();
 
         while( names.indexOf(uniqueName) != -1 ){
-        //while( uniqueName in names ){
+        // while( uniqueName in names ){
             num++;
             uniqueName = name + "." + num;
         }

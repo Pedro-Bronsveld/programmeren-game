@@ -22,7 +22,7 @@ class ModelSource implements ObjectSource{
         this.location = new LocRot();
         this.rotation = new LocRot();
         this.scale = new Scale();
-        //light data:
+        // light data
         this.data = {
             spot_blend: 0,
             decay: 2,

@@ -2,18 +2,18 @@
 
 class Camera extends GameObject{
     public camera: THREE.PerspectiveCamera;
-    //protected orbit: THREE.OrbitControls;
+    // protected orbit: THREE.OrbitControls;
     constructor(level: Level, name:string="Camera", position:THREE.Vector3=new THREE.Vector3(), rotation:THREE.Vector3=new THREE.Vector3()){
         super(level, name, "Camera");
-        //create camera:
+        // create camera
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.09, 1000);
-        //this.orbit = new THREE.OrbitControls(this.camera);
+        // this.orbit = new THREE.OrbitControls(this.camera);
         
         this.camera.rotation.x = rotation.x;
         this.camera.rotation.y = rotation.y;
         this.camera.rotation.z = rotation.z;
 
-        //set position and rotation:
+        // set position and rotation
         this.camera.position.set(position.x, position.y, position.z);
 
         window.addEventListener("resize", this.setSize);
@@ -34,11 +34,11 @@ class Camera extends GameObject{
     }
 
     public update(){
-        //this.orbit.update();
-        //console.log(this.camera.position);
+        // this.orbit.update();
+        // console.log(this.camera.position);
     }
 
-    //position:
+    // position
     public get pX():number{ return this.camera.position.x };
     public get pY():number{ return this.camera.position.y };
     public get pZ():number{ return this.camera.position.z };
@@ -54,7 +54,7 @@ class Camera extends GameObject{
         this.pZ = vector3.z;
     }
 
-    //rotation:
+    // rotation
     public get rX():number{ return this.camera.rotation.x };
     public get rY():number{ return this.camera.rotation.y };
     public get rZ():number{ return this.camera.rotation.z };

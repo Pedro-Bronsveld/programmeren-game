@@ -1,6 +1,6 @@
 /// <reference path="Model.ts" />
 
-//a model able to be moved backward and forward, have collision and gravity:
+// a model able to be moved backward and forward, have collision and gravity
 class MobileModel extends Model{
 
     protected moving: Moving;
@@ -14,19 +14,19 @@ class MobileModel extends Model{
 
     constructor(level: Level, model: string, modelSource: ModelSource = new ModelSource(), autoAdd:boolean=true){
         super(level, model, modelSource, autoAdd);
-        //collision:
+        // collision
         this.hasCollision = false;
         this.collisionBox = new CollisionBox(this);
         
-        //vertical movement:
+        // vertical movement
         this.hasGravity = false;
         this.yVelocity = 0;
         this.jump = false;
         this.bottomDistance = 0;
 
-        //horizontal movement:
+        // horizontal movement
         this.moving = new Moving();
-        //velocity in units/second
+        // velocity in units/second
         this.velocity = 35;
     }
     
@@ -34,10 +34,10 @@ class MobileModel extends Model{
         return this.hasCollision;
     }
 
-    //move the model relative to its rotation
+    // move the model relative to its rotation
     protected moveUpdate(delta: number):void{
 
-        //get move direction:
+        // get move direction
         let moveZ:number = Math.abs(this.moving.forward);
         let moveX:number = Math.abs(this.moving.sideways);
         let moveTotal:number = moveZ + moveX;
@@ -45,7 +45,7 @@ class MobileModel extends Model{
         let direction: THREE.Vector2 = new THREE.Vector2(moveX, moveZ).normalize();
 
         if(this.collisionBox.collisionVisible){
-            //set rotation for debugging collision box mesh:
+            // set rotation for debugging collision box mesh
             this.collisionBox.rX = -this.rX;
             this.collisionBox.rY = -this.rY;
             this.collisionBox.rZ = -this.rZ;
@@ -53,7 +53,7 @@ class MobileModel extends Model{
 
         if(moveTotal > 0){
 
-            //caluclate amount to move forward and sideways:
+            // caluclate amount to move forward and sideways
             let dirZ:number = this.moving.forward / moveZ;
             let dirX:number = this.moving.sideways / moveX;
 
@@ -67,74 +67,72 @@ class MobileModel extends Model{
             let velocityZ = direction.y * dirZ * this.velocity * delta;
             let velocityX = direction.x * dirX * this.velocity * delta;
 
-            //console.log("x: " + velocityX + " z: " + velocityZ);
-
-            //check collision in front and on the sides,
-            //this is the maximim distance the model can be translated before hitting something:
+            // check collision in front and on the sides,
+            // this is the maximim distance the model can be translated before hitting something
             let front: number = this.collisionBox.front().distance;
             let back: number = this.collisionBox.back().distance;
             let right: number = this.collisionBox.right().distance;
             let left: number = this.collisionBox.left().distance;
 
-            //set the transformation to the direction the camera is facing:
+            // set the transformation to the direction the camera is facing
             let transform: THREE.Vector3 = new THREE.Vector3(velocityX, 0, velocityZ);
             transform.applyAxisAngle(new THREE.Vector3(0,1,0), this.rY);
             
-            //check for collision:
+            // check for collision
             if(this.hasCollision){
-                //forward and backward:
+                // forward and backward
                 if(transform.z > 0){
-                    //moving forward on z axis
+                    // moving forward on z axis
                     if(front < transform.z){
                         transform.z = front;
                     }
                 }
                 else if(transform.z < 0){
-                    //moving backward on z axis
+                    // moving backward on z axis
                     if(back < -transform.z){
                         transform.z = -back;
                     }
                 }
 
-                //sideways:
+                // sideways
                 if(transform.x > 0){
-                    //moving left on x axis
+                    // moving left on x axis
                     if(left < transform.x){
                         transform.x = left;
                     }
                 }
                 else if(transform.x < 0){
-                    //moving right on x axis
+                    // moving right on x axis
                     if(right < -transform.x){
                         transform.x = -right;
                     }
                 }
             }
             
-            //apply transoformation:
+            // apply transoformation
             this.mesh.position.x += transform.x;
             this.mesh.position.z += transform.z;
 
         }
 
-        //vertical movement:
+        // vertical movement
         if(this.hasGravity){
 
-            //get distance on bottom:
+            // get distance on bottom
             let bottom: number = this.collisionBox.bottom().distance;
             let top: number = this.collisionBox.top().distance;
             this.bottomDistance = bottom;
 
-            //ammount to translate y:
+            // ammount to translate y
             let amount: number = 0;
 
-            //check bottom:
+            // check bottom
             if(bottom <= 0 && this.yVelocity < 0){
-                //on or under the floor
+                // on or under the floor
                 amount = -bottom;
             }
             else{
-                //in the air
+                // in the air
                 this.yVelocity -= 2.4 * delta;
 
                 if(this.yVelocity < 0){
@@ -147,7 +145,7 @@ class MobileModel extends Model{
 
                 amount = this.yVelocity;
 
-                //check for a ceiling:
+                // check for a ceiling
                 if(this.yVelocity > 0 && top < this.yVelocity){
                     this.yVelocity = 0;
                     amount = top;
@@ -172,7 +170,7 @@ class MobileModel extends Model{
     public update(delta:number){
         super.update(delta);
 
-        //updating position:
+        // updating position
         this.moveUpdate(delta);
     }
 

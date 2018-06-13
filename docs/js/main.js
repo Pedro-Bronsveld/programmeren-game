@@ -860,9 +860,6 @@ class Gun extends Model {
                 this.fireState = 2;
             }
             else if (this.fireState == 2) {
-                this.fireState = 3;
-            }
-            else if (this.fireState == 3) {
                 let targetVector = this.level.playerCam.getTarget();
                 new Bullet(this.level, this.getWorldMatrix(), targetVector, new THREE.Vector3(-5, -0.40, 0), [this.player.modelName], undefined, 0xff0000, 0.5);
                 this.fireState = 0;

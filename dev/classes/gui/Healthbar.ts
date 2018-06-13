@@ -7,7 +7,7 @@ class Healthbar{
         this.game = game;
         this.hud = hud;
 
-        //create healthbar elements:
+        // create healthbar elements
         this.container = document.createElement("healthcontainer");
         this.bar = document.createElement("healthbar");
 
@@ -16,7 +16,7 @@ class Healthbar{
     }
 
     public update():void{
-        //get player health:
+        // get player health
         let health: number = this.game.level.player.hp;
         let maxHealth: number = this.game.level.player.maxHp;
 

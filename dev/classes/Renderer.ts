@@ -7,21 +7,21 @@ class Renderer{
     constructor(){
         this.assignedCamera = new THREE.PerspectiveCamera();
         this.assignedScene = new THREE.Scene();
-        //create new three js renderer with anti aliasing
+        // create new three js renderer with anti aliasing
         this.renderer = new THREE.WebGLRenderer({antialias: true});
         this.setSize();
 
-        //enable shadows:
+        // enable shadows
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-        //add canvas to body:
+        // add canvas to body
         document.getElementsByTagName("game")[0].appendChild( this.renderer.domElement );
 
-        //resize when window size changes:
+        // resize when window size changes
         window.addEventListener("resize", this.setSize);
 
-        //pointer lock:
+        // pointer lock
         this.pointerLocked = false;
         this.element.requestPointerLock = this.element.requestPointerLock;
         this.element.addEventListener("click", () => this.lockPointer() );

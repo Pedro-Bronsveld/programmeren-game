@@ -4,7 +4,7 @@ class IntersectsFilter{
     private level: Level;
     constructor(level:Level, ignoreModels:Array<string>=new Array<string>(), ignoreNames:Array<string>=new Array<string>()){
         this.level = level;
-        //models that should always be filtered out
+        // models that should always be filtered out
         let alwaysIgnoreModels = ["bullet", "gun", "ShadowHelper", "skybox"];
 
         this.ignoreModels = ignoreModels.concat(alwaysIgnoreModels);

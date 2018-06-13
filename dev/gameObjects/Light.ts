@@ -8,10 +8,10 @@ class Light extends GameObject{
 
         let showShadowHelper:boolean = false;
 
-        //convert rgb to hex color:
+        // convert rgb to hex color
         let color : number = parseInt( "0x" + utils.toHEX(lightSource.data.color) );
         if(lightSource.data.type == "SUN"){
-            //lamp is sun
+            // lamp is sun
             this.propLight = new THREE.DirectionalLight(color, lightSource.data.energy);
             if(lightSource.data.cast_shadow){
                 this.propLight.shadow.camera = new THREE.OrthographicCamera( -100, 100, 100, -100, 0.5, 200 );
@@ -26,23 +26,23 @@ class Light extends GameObject{
             
         }
         else if(lightSource.data.type == "HEMI"){
-            //lamp is hemi
+            // lamp is hemi
             let horizon_color : number = parseInt( "0x" + utils.toHEX(this.propLevel.skyColor) );
             this.propLight = new THREE.HemisphereLight( horizon_color, color, lightSource.data.energy );
         }
         else if(lightSource.data.type == "SPOT"){
-            //lamp is spot
+            // lamp is spot
             this.propLight = new THREE.SpotLight( color, lightSource.data.energy, lightSource.data.distance, lightSource.data.spot_size, lightSource.data.spot_blend, lightSource.data.decay );
         }
         else{
-            //lamp is point
+            // lamp is point
             this.propLight = new THREE.PointLight(color, lightSource.data.energy, lightSource.data.distance, lightSource.data.decay);   
             
         }
-        //wether to cast a shadow from this light:
+        // wether to cast a shadow from this light
         this.propLight.castShadow = lightSource.data.cast_shadow;
         if(this.propLight.castShadow){
-            //set shadow resolution:
+            // set shadow resolution
             this.propLight.shadow.mapSize.width = 1000;
             this.propLight.shadow.mapSize.height = 1000;
         }
@@ -55,7 +55,7 @@ class Light extends GameObject{
         return this.propLight;
     }
 
-    //position:
+    // position
     public get pX():number{ return this.light.position.x };
     public get pY():number{ return this.light.position.y };
     public get pZ():number{ return this.light.position.z };
@@ -73,7 +73,7 @@ class Light extends GameObject{
         this.pZ = vector3.z;
     }
 
-    //update in gameloop:
+    // update in gameloop
     update():void{
         if(this.modelName == "Sun"){
             this.propLight.position.set(

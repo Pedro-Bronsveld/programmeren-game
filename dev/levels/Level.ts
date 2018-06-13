@@ -18,14 +18,14 @@ class Level{
         this.propGame = game;
         this.name = levelName;
 
-        //used to pause level update loop:
+        // used to pause level update loop
         this.isPaused = false;
 
-        //model names always ignored by collision boxes:
+        // model names always ignored by collision boxes
         this.noCollisionModels = ["bullet", "gun", "ShadowHelper", "skybox"];
         this.noCollisionNames = [];
 
-        //create three js scene
+        // create three js scene
         this.scene = new THREE.Scene();
         this.propSkyColor = {r: 255, g: 255, b:255};
         this.models = new Array<Model>();
@@ -36,35 +36,35 @@ class Level{
         this.playerCamera.assignToRenderer(this.propGame.renderer);
         this.scene.add(this.playerCamera.camera);
 
-        //create regular camera:
+        // create regular camera
         this.camera = new Camera(this);
         
-        //create an ambient light:
+        // create an ambient light
         this.ambientLight = new THREE.AmbientLight( 0xffffff );
         this.scene.add(this.ambientLight);
 
-        //get level data by name from game object
+        // get level data by name from game object
         let levelSrcData: LevelSrcData = this.game.levelDataByName(levelName);
 
-        //set player position
+        // set player position
         this.player.pX = levelSrcData.player_start.x;
         this.player.pY = levelSrcData.player_start.y;
         this.player.pZ = levelSrcData.player_start.z;
 
-        //level setup using level source data:
+        // level setup using level source data
         this.propSkyColor = levelSrcData.horizon_color;
         this.ambientLight.intensity = levelSrcData.environment_light;
-        //load the objects into the level:
+        // load the objects into the level
         for(let key in levelSrcData.objects){
             let obj : ObjectSource = Object.create(levelSrcData.objects[key]);
             
-            //check if the model has its own class:
+            // check if the model has its own class
             if(obj.model == "turret_base"){
-                //turret
+                // turret
                 new TurretBase(this, obj);
             }
             else if(obj.model == "practice_target"){
-                //practice target
+                // practice target
                 new PracticeTarget(this, obj);
             }
             else if(obj.type == 'MESH'){
@@ -79,14 +79,14 @@ class Level{
 
         this.assignToRenderer(this.game.renderer);
 
-        //hide menu:
+        // hide menu
         this.game.menu.visible = false;
-        //show hud:
+        // show hud
         this.game.hud.visible = true;
 
     }
 
-    //getters:
+    // getters
     public get player():Player{
         return this.propPlayer;
     }
@@ -117,7 +117,7 @@ class Level{
         this.models.push(model);
     }
     public addModel(model: Model): void{
-        //add model to gameobjects array:
+        // add model to gameobjects array
         this.addModelOnly(model);
         this.scene.add( model.getMesh() );
     }
@@ -127,7 +127,7 @@ class Level{
         this.scene.add(light.light);
     }
 
-    //add name for no collision:
+    // add name for no collision
     public addNoCollisionName(name: string):void{
         this.noCollisionNames.push(name);
     }
@@ -135,7 +135,7 @@ class Level{
         return this.noCollisionNames;
     }
 
-    //get model by name:
+    // get model by name
     public getModelByName(name: string):Model|null{
         for(let model of this.models){
             if(model.name == name){
@@ -145,7 +145,7 @@ class Level{
         return null;
     }
 
-    //remove model:
+    // remove model
     public removeModel(model: Model):void{
         let modelsCount:number = this.models.length;
         for(let i = 0; i < modelsCount; i++){
@@ -155,7 +155,7 @@ class Level{
             }
         }
     }
-    //remove model by name:
+    // remove model by name
     public removeModelByName(name: string){
         let model: Model|null = this.getModelByName(name);
         if(model){
@@ -164,7 +164,7 @@ class Level{
     }
 
     public namesInUse(): Array<string>{
-        //returns the names of all gameobjects in the level:
+        // returns the names of all gameobjects in the level
         let names: Array<string> = new Array();
         for(let model of this.models){
             names.push(model.name);
@@ -178,12 +178,12 @@ class Level{
     public update(delta: number): void{
 
         if(!this.isPaused){
-            //update models:
+            // update models
             for(let model of this.models){
                 model.update(delta);
             }
     
-            //update lights:
+            // update lights
             for(let light of this.lights ){
                 light.update();
             }

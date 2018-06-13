@@ -6,9 +6,9 @@ class MainMenu extends Level{
         this.cam.pY = 50;
         this.cam.pZ = 25;
 
-        //hide hud:
+        // hide hud
         this.game.hud.visible = false;
-        //show menu:
+        // show menu
         this.game.menu.visible = true;
 
     }

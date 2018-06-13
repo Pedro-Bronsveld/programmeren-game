@@ -14,7 +14,7 @@ class EventManager{
     }
 
     public clear = ():void => {
-        //remove all events that are not permanent
+        // remove all events that are not permanent
         for(let event of this.events){
             if(!event.permanent){
                 event.object.removeEventListener(event.event, event.func);

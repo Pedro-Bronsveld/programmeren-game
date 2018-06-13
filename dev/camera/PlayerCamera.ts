@@ -12,23 +12,23 @@ class PlayerCamera extends Camera{
         super(level);
         this.targetModel = model;
 
-        //y offset of the camera
+        // y offset of the camera
         this.yOffset = 10;
-        //default distance between the player and the camera:
+        // default distance between the player and the camera
         this.defaultDistance = 15;
         this.distance = this.defaultDistance;
 
         this.viewRotateX = 0;
         this.viewRotateY = 0;
 
-        //setup intersects filter:
+        // setup intersects filter
         this.targetIntersectsFilter = new IntersectsFilter(this.level ,undefined, [this.targetModel.name]);
         this.cameraIntersectsFilter = new IntersectsFilter(this.level, ["turret_top"], [this.targetModel.name]);
 
-        //add mouse event listeners:
+        // add mouse event listeners
         window.addEventListener("mousemove", this.mouseHandler);
 
-        //add crosshair:
+        // add crosshair
         let crosshair: Model = new Model(level, "crosshair", undefined, false);
         var crosshairMaterial = new THREE.MeshBasicMaterial({color: 0xffffff, transparent: true, opacity: 0.75});
         crosshair.material = crosshairMaterial;
@@ -37,38 +37,38 @@ class PlayerCamera extends Camera{
         crosshair.sY = 0.002;
         crosshair.sX = 0.002;
 
-        //add crosshair to camera:
+        // add crosshair to camera
         this.camera.add(crosshair.getMesh());
         
     }
 
     public getTarget():THREE.Vector3{
-        //set direction vector to the side the camera is facing
+        // set direction vector to the side the camera is facing
         let direction = new THREE.Vector3( 0, 0, -1 );
         direction.applyQuaternion( this.camera.quaternion );
 
-        //max distance a ray will be cast:
+        // max distance a ray will be cast
         let maxDistance = 200;
 
-        //create raycaster
+        // create raycaster
         let rayCaster: THREE.Raycaster = new THREE.Raycaster(this.camera.position, direction, 0, maxDistance);
-        //get intersected objects:
+        // get intersected objects
         let intersects: THREE.Intersection[] = rayCaster.intersectObjects( this.level.getScene().children );
 
-        //filter intersects array:
+        // filter intersects array
         intersects = this.targetIntersectsFilter.check(intersects);
 
         if(intersects.length > 0){
             return intersects[0].point;
         }
         else{
-            //calculate furthest point of the raycaster:
+            // calculate furthest point of the raycaster
             let maxPoint:THREE.Vector3 = new THREE.Vector3(0,0,-maxDistance);
             maxPoint.applyQuaternion( this.camera.quaternion );
             /*maxPoint.applyAxisAngle( new THREE.Vector3(1, 0, 0), this.camera.rotation.x );
             maxPoint.applyAxisAngle( new THREE.Vector3(0, 1, 0), this.camera.rotation.y ); */
 
-            //maxPoint.applyMatrix4(this.camera.matrixWorld);
+            // maxPoint.applyMatrix4(this.camera.matrixWorld);
             maxPoint.x += this.camera.position.x;
             maxPoint.y += this.camera.position.y;
             maxPoint.z += this.camera.position.z;
@@ -85,7 +85,7 @@ class PlayerCamera extends Camera{
             this.viewRotateX += e.movementY * sens;
             this.viewRotateY -= e.movementX * sens;
 
-            //x axis rotation limits:
+            // x axis rotation limits
             let xMax:number = Math.PI/2 - 0.0001;
             let xMin:number = -xMax;
             if(this.viewRotateX > xMax){
@@ -108,42 +108,42 @@ class PlayerCamera extends Camera{
     public update():void{
 
         function changeDirection(inputVector:THREE.Vector3, angleX:number, angleY:number):THREE.Vector3{
-            //change the direction of a vector:
-            //x and y axis:
+            // change the direction of a vector
+            // x and y axis
             let axisX: THREE.Vector3 = new THREE.Vector3(1,0,0);
             let axisY: THREE.Vector3 = new THREE.Vector3(0,1,0);
 
-            //create output vector:
+            // create output vector
             let directionVector: THREE.Vector3 = new THREE.Vector3().copy(inputVector);
-            //change direction:
+            // change direction
             directionVector.applyAxisAngle(axisX, angleX);
             directionVector.applyAxisAngle(axisY, angleY);
             return directionVector;
         }
 
-        //create the target vector of the camera:
+        // create the target vector of the camera
         let cameraTarget:THREE.Vector3 = this.targetModel.posVector;
         cameraTarget.y += this.yOffset;
 
-        //updating the camera rotation:
+        // updating the camera rotation
 
-        //angles to rotate:
+        // angles to rotate
         let angleX:number = this.viewRotateX;
         let angleY:number = this.viewRotateY;
 
-        //check if there's no objects between the camera and the player:
-        //set directional vector:
+        // check if there's no objects between the camera and the player
+        // set directional vector
         let raycasterDirection: THREE.Vector3 = new THREE.Vector3(0,0,-1);
-        //change rotation of vector:
+        // change rotation of vector
         raycasterDirection = changeDirection(raycasterDirection, angleX, angleY);
-        //create raycaster, origin point is the camera target vector:
+        // create raycaster, origin point is the camera target vector
         let rayCaster: THREE.Raycaster = new THREE.Raycaster(cameraTarget, raycasterDirection, 0, this.distance + 1);
         let intersects: Array<THREE.Intersection> = rayCaster.intersectObjects( this.level.getScene().children );
 
-        //filter intersects:
+        // filter intersects
         intersects = this.cameraIntersectsFilter.check(intersects);
 
-        //ignore player model:
+        // ignore player model
         for(let i = 0; i < intersects.length; ){
             if( intersects[i].object.userData.uniqueName == this.level.player.modelName ){
                 intersects.splice(i, 1);
@@ -153,10 +153,10 @@ class PlayerCamera extends Camera{
             }
         }
 
-        //relative offset - distance between the player model and the camera:
+        // relative offset - distance between the player model and the camera
         let cameraOffset:THREE.Vector3;
         if(intersects.length > 0){
-            //object intersected, camera needs to be closer to the target:
+            // object intersected, camera needs to be closer to the target
             let distance: number = intersects[0].distance - 1;
             cameraOffset = new THREE.Vector3(0,0,-distance);
 
@@ -166,13 +166,13 @@ class PlayerCamera extends Camera{
         }
 
 
-        //change rotation of camera vector:
+        // change rotation of camera vector
         cameraOffset = changeDirection(cameraOffset, angleX, angleY);
         
-        //move camera up:
+        // move camera up
         cameraOffset.y += this.yOffset;
 
-        //set camera position and rotation relative to the player model:
+        // set camera position and rotation relative to the player model
         let modelPos = this.targetModel.posVector;
         cameraOffset.x += modelPos.x;
         cameraOffset.y += modelPos.y;

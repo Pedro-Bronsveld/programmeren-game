@@ -11,15 +11,15 @@ class Model extends GameObject{
     constructor(level: Level, meshName: string, modelSource: ModelSource = new ModelSource(), autoAdd:boolean=true){
         super(level, meshName, "Model");
         
-        //get mesh data:
+        // get mesh data
         let meshData: MeshData = level.game.meshDataByName(meshName);
         this.mesh = meshData.mesh;
         let geometry: THREE.Geometry = meshData.geometry;
 
-        //set name of mesh:
+        // set name of mesh
         this.mesh.userData.uniqueName = this.name;
 
-        //setup animation actions:
+        // setup animation actions
         this.mixer = new THREE.AnimationMixer(this.mesh);
         this.actions = {};
         this.playingAction = "";
@@ -36,11 +36,11 @@ class Model extends GameObject{
             
         }
 
-        //set model name in source data:
+        // set model name in source data
         modelSource.model = this.name;
         this.modelSource = modelSource;
 
-        //add model to level if autoadd is true:
+        // add model to level if autoadd is true
         if(autoAdd){
             this.level.addModel(this);
         }
@@ -48,7 +48,7 @@ class Model extends GameObject{
             this.level.addModelOnly(this);
         }
 
-        //position mesh:
+        // position mesh
         this.posVector = new THREE.Vector3(this.modelSource.location.x, this.modelSource.location.y, this.modelSource.location.z);
         this.rotVector = new THREE.Vector3(this.modelSource.rotation.x, this.modelSource.rotation.y, this.modelSource.rotation.z);
         this.scaleVector = new THREE.Vector3(this.modelSource.scale.x, this.modelSource.scale.y, this.modelSource.scale.z);
@@ -68,7 +68,7 @@ class Model extends GameObject{
         this.mesh.material = material;
     }
 
-    //position:
+    // position
     public get pX():number{ return this.mesh.position.x };
     public get pY():number{ return this.mesh.position.y };
     public get pZ():number{ return this.mesh.position.z };
@@ -84,7 +84,7 @@ class Model extends GameObject{
         this.pZ = vector3.z;
     }
 
-    //rotation:
+    // rotation
     public get rX():number{ return this.mesh.rotation.x };
     public get rY():number{ return this.mesh.rotation.y };
     public get rZ():number{ return this.mesh.rotation.z };
@@ -100,7 +100,7 @@ class Model extends GameObject{
         this.rZ = vector3.z;
     }
 
-    //scale:
+    // scale
     public get sX():number{ return this.mesh.scale.x };
     public get sY():number{ return this.mesh.scale.y };
     public get sZ():number{ return this.mesh.scale.z };
@@ -116,12 +116,12 @@ class Model extends GameObject{
         this.sZ = vector3.z;
     }
 
-    //get world matrix from mesh:
+    // get world matrix from mesh
     public getWorldMatrix():THREE.Matrix4{
         return this.mesh.matrixWorld;
     }
 
-    //stop any action of the model that is playing:
+    // stop any action of the model that is playing
     /*
     private stopAction(name: string):void{
         for(let key in this.actions){
@@ -132,7 +132,7 @@ class Model extends GameObject{
     }
     */
 
-    //play an action:
+    // play an action
     protected playAction(name: string, repetitions:number=Infinity):void{
         if(name != this.playingAction){
             for(let key in this.actions){
@@ -155,14 +155,14 @@ class Model extends GameObject{
                     }
 
                     from.crossFadeTo(to, 0.2, true);
-                    //this.stopAction(this.playingAction);
+                    // this.stopAction(this.playingAction);
                     this.playingAction = name;
                 }
             }
         }
     }
 
-    //set action time scale:
+    // set action time scale
     protected actionTimeScale(name:string, scale:number=1):void{
         for(let key in this.actions){
             if(key == name){
@@ -171,9 +171,9 @@ class Model extends GameObject{
         }
     }
 
-    //update in game loop:
+    // update in game loop
     public update(delta:number):void{
-        //update animation:
+        // update animation
         this.mixer.update(delta);
     }
 }

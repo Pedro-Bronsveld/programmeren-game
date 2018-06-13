@@ -10,15 +10,15 @@ class Menu{
 
         this.isVisible = false;
 
-        //create the menu element:
+        // create the menu element
         this.element = document.createElement("gamemenu");
         this.game.element.appendChild(this.element);
 
-        //create the buttons container:
+        // create the buttons container
         this.buttonsContainer = document.createElement("buttonscontainer");
         this.element.appendChild(this.buttonsContainer);
 
-        //create the buttons in the menu:
+        // create the buttons in the menu
         this.buttons = new Array<HTMLElement>();
         this.addButton("start", () => this.start() );
         this.addButton("useless button", () => console.log("this button does nothing"));
@@ -38,7 +38,7 @@ class Menu{
         this.game.loadLevel("level_1");
     }
 
-    //visibility of menu:
+    // visibility of menu
     public get visible():boolean{
         return this.isVisible;
     }

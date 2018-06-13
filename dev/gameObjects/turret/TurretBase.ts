@@ -3,7 +3,7 @@ class TurretBase extends Model{
     constructor(level: Level, modelSource: ModelSource = new ModelSource()){
         super(level, "turret_base", modelSource);
 
-        //add top of turret to base:
+        // add top of turret to base
         this.top = new TurretTop(level, this);
         let topPos: THREE.Vector3 = this.posVector;
         topPos.y += 8.7;

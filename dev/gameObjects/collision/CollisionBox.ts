@@ -37,14 +37,14 @@ class CollisionBox{
         this.model = model;
         this.rotationEnabled = rotationEnabled;
 
-        //for development:
+        // for development
         this.collisionVisible = false;
 
-        //filter for models and unique names that should be ignored when checking for colision:
+        // filter for models and unique names that should be ignored when checking for colision
         ignoreModels.push(this.model.name);
         this.intersectsFilter = new IntersectsFilter(this.model.level, ignoreModels, ignoreNames);
 
-        //how far the raycaster rays should check beyond the collision box:
+        // how far the raycaster rays should check beyond the collision box
         this.extraDistance = extraDistance;
 
         this.sideZ = new THREE.PlaneGeometry(0,0);
@@ -59,7 +59,7 @@ class CollisionBox{
 
         if(model.collisionEnabled && sizeX > 0 && sizeY > 0 && sizeZ > 0){
 
-            //calculate segments:
+            // calculate segments
             let segments: THREE.Vector3 = new THREE.Vector3();
             function setSegment(seg: number):number{
                 seg = Math.floor(seg);
@@ -91,28 +91,28 @@ class CollisionBox{
                 segments.z = setSegment(givenSegments.z);
             }
 
-            //make box visible:
-            //create box geometry:
+            // make box visible
+            // create box geometry
             let boxGeometry: THREE.BoxGeometry = new THREE.BoxGeometry( this.boxSize.x, this.boxSize.y, this.boxSize.z, segments.x, segments.y, segments.z);
-            //set offset:
+            // set offset
             boxGeometry.translate(this.boxOffset.x, this.boxOffset.y, this.boxOffset.z);
             let boxEdges: THREE.EdgesGeometry = new THREE.EdgesGeometry( boxGeometry, 0 );
             let boxLine: THREE.LineSegments = new THREE.LineSegments( boxEdges, new THREE.LineBasicMaterial( { color: 0xffffff } ) );
             this.box = boxLine;
-            //add lines to model to see size of collision box:
+            // add lines to model to see size of collision box
 
             if(this.collisionVisible){ 
                 model.getMesh().add(this.box);
             }
 
-            //create geometry:
+            // create geometry
             let sideGeomtries: Array<SideGeometry> = [
                 {side:"z", geometry: new THREE.PlaneGeometry(this.boxSize.x, this.boxSize.y, segments.x, segments.y), color: 0xff0000}, //side facing front and back
                 {side:"x", geometry: new THREE.PlaneGeometry(this.boxSize.z, this.boxSize.y, segments.z, segments.y), color: 0x0000ff}, //side facing left and right
                 {side:"y", geometry: new THREE.PlaneGeometry(this.boxSize.x, this.boxSize.z, segments.x, segments.z), color: 0x00ff00}  //side facing up and down
             ];
 
-            //add extra vertex to center:
+            // add extra vertex to center
             if(centerVertex){
                 for(let side of sideGeomtries){
                     side.geometry.vertices.push( new THREE.Vector3() );
@@ -123,19 +123,19 @@ class CollisionBox{
             }
 
             for(let sideGeo of sideGeomtries){
-                //ignore lowest vertices:
+                // ignore lowest vertices
                 if(gravity){
                     if(sideGeo.side == "x" || sideGeo.side == "z"){
                         for(let vertex of sideGeo.geometry.vertices){
-                            //raising lowest vertices:
+                            // raising lowest vertices
                             if(vertex.y == -this.boxSize.y/2){
-                                //vertex.y += (this.boxSize.y / segments.y)/2;
+                                // vertex.y += (this.boxSize.y / segments.y)/2;
                                 if(this.boxSize.y >= 1){
                                     vertex.y += 1;
                                 }
                             }
 
-                            //bringing outer vertices inward slightly:
+                            // bringing outer vertices inward slightly
                             if(vertex.x == this.boxSize.x/2){
                                 vertex.x -= (this.boxSize.x / segments.x)/10;
                             }
@@ -145,7 +145,7 @@ class CollisionBox{
                         }
                     }
                     if(sideGeo.side == "y"){
-                        //sideGeo.geometry.scale(0.5, 0.5, 1);
+                        // sideGeo.geometry.scale(0.5, 0.5, 1);
                         for(let vertex of sideGeo.geometry.vertices){
                             if(vertex.y == this.boxSize.z/2){
                                 vertex.y -= (this.boxSize.z / segments.z)/3;
@@ -162,21 +162,21 @@ class CollisionBox{
                         }
                     }
                 }
-                //set rotation:
+                // set rotation
                 if(sideGeo.side == "x"){
                     sideGeo.geometry.rotateY(Math.PI/2);
                 }
                 else if(sideGeo.side == "y"){
                     sideGeo.geometry.rotateX(Math.PI/2);
                 }
-                //set offset:
+                // set offset
                 sideGeo.geometry.translate(this.boxOffset.x, this.boxOffset.y, this.boxOffset.z);
 
                 if(this.collisionVisible){
-                    //make side visible:
+                    // make side visible
                     let edges: THREE.EdgesGeometry = new THREE.EdgesGeometry( sideGeo.geometry, 0 );
                     let line: THREE.LineSegments = new THREE.LineSegments( edges, new THREE.LineBasicMaterial( { color: sideGeo.color } ) );
-                    //add to mesh:
+                    // add to mesh
                     this.box.add(line);
                 }
 
@@ -192,7 +192,7 @@ class CollisionBox{
                 
             }
 
-            //put sides in array:
+            // put sides in array
             this.sides.push( new CollisionSide("front", this.sideZ, this.boxSize.x, new THREE.Vector3(0,0,1) ) );
             this.sides.push( new CollisionSide("back", this.sideZ, this.boxSize.x, new THREE.Vector3(0,0,-1)) );
 
@@ -205,7 +205,7 @@ class CollisionBox{
         }
     }
 
-    //get and set rotation:
+    // get and set rotation
     public get rX():number{ return this.box.rotation.x };
     public set rX(x: number){ this.box.rotation.x = x };
 
@@ -215,23 +215,23 @@ class CollisionBox{
     public get rZ():number{ return this.box.rotation.z };
     public set rZ(z: number){ this.box.rotation.z = z };
 
-    //check for collision:
-    //returns the distance until collision on one side of the collision box:
+    // check for collision
+    // returns the distance until collision on one side of the collision box
     private checkSide(sideName:string):RayData{
-        //get side data from array:
+        // get side data from array
         let rayData: RayData = new RayData(0, new THREE.Vector3(), new THREE.Object3D(), false, 0);
         for(let side of this.sides){
             if(side.side == sideName){
-                //setup side variables:
+                // setup side variables
                 let direction: THREE.Vector3 = new THREE.Vector3().copy(side.direction);
                 let geometry: THREE.PlaneGeometry = new THREE.PlaneGeometry(0,0).copy(side.geometry);
                 let distance:number;
                 distance = side.size/2 + this.extraDistance;
 
-                //apply transformations to direction and geometry:
+                // apply transformations to direction and geometry
                 if(this.rotationEnabled){
-                    //direction.applyAxisAngle(new THREE.Vector3(0,1,0), this.model.rY);
-                    //direction.applyQuaternion(this.model.getMesh().quaternion);
+                    // direction.applyAxisAngle(new THREE.Vector3(0,1,0), this.model.rY);
+                    // direction.applyQuaternion(this.model.getMesh().quaternion);
                     direction.applyAxisAngle(new THREE.Vector3(1,0,0), this.model.rX);
                     direction.applyAxisAngle(new THREE.Vector3(0,1,0), this.model.rY);
                     direction.applyAxisAngle(new THREE.Vector3(0,0,1), this.model.rZ);
@@ -244,23 +244,23 @@ class CollisionBox{
                 geometry.translate( this.model.pX, this.model.pY, this.model.pZ );
                 
 
-                //variable for the hortest distance detected by raycasters:
+                // variable for the hortest distance detected by raycasters
                 let shortestDistance: number = distance;
                 let closestPoint: THREE.Vector3 = new THREE.Vector3();
                 let closestModel: THREE.Object3D = new THREE.Object3D();
                 let intersected: boolean = false;
                 let faceIndex: number = 0;
-                //check all vertices of geometry:
+                // check all vertices of geometry
                 for(let vertex of geometry.vertices){
-                    //create raycaster and cast rays:
+                    // create raycaster and cast rays
                     let raycaster = new THREE.Raycaster(vertex , direction, 0, distance );
-                    //get array with objects intersected by raycaster:
+                    // get array with objects intersected by raycaster
                     let intersects = raycaster.intersectObjects( this.model.level.getScene().children);
-                    //filter intersects:
+                    // filter intersects
                     intersects = this.intersectsFilter.check(intersects);
-                    //loop through intersected objects:
+                    // loop through intersected objects
                     for(let intersect of intersects){
-                        //check if the distance to the object is shorter than the shortest measured distance:
+                        // check if the distance to the object is shorter than the shortest measured distance
                         if(intersect.distance < shortestDistance){
                             shortestDistance = intersect.distance;
                             closestPoint = intersect.point;
