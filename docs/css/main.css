@@ -1,6 +1,7 @@
 body {
     margin: 0;
     overflow: hidden;
+    font-family: 'Aldrich', sans-serif;
 }
 canvas {
     position: absolute;
@@ -17,7 +18,7 @@ game{
     height: 100%;
     display: block;
 }
-
+/* hud */
 hud{
     display: none;
     position: absolute;
@@ -49,4 +50,53 @@ healthbar{
     width: 100%;
     height: 100%;
     background-color: red;
+}
+
+/* main menu */
+gamemenu{
+    position: absolute;
+    z-index: 100;
+    display: none;
+    height: 100%;
+    width: 100%;
+    background-color: rgba(66,66,66,0.5);
+    margin: 0px;
+    text-align: center;
+}
+gamemenu[data-visible="true"]{
+    display: inline-block;
+}
+
+buttonscontainer{
+    position: relative;
+    width: 300px;
+    height: 100%;
+
+    display: inline-flex;
+    flex-direction: column;
+    justify-content: center;
+
+    
+}
+
+menubutton{
+    position: relative;
+    width: 100%;
+    height: 50px;
+    background-color: #303F9F;
+    border: 5px solid #1A237E;
+    color: white;
+    margin: 12px 0px;
+    cursor: pointer;
+    line-height: 50px;
+    font-size: 30px;
+    transition: transform 0.1s;
+}
+menubutton:hover{
+    transform: scale(1.05);
+    background-color: #3F51B5;
+    border-color: #283593;
+}
+menubutton:active{
+    transform: scale(0.95);
 }

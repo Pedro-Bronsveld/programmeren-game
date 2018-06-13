@@ -2,6 +2,8 @@ class Renderer{
     private renderer: THREE.WebGLRenderer;
     private assignedCamera: THREE.PerspectiveCamera;
     private assignedScene: THREE.Scene;
+    private pointerLocked: boolean;
+
     constructor(){
         this.assignedCamera = new THREE.PerspectiveCamera();
         this.assignedScene = new THREE.Scene();
@@ -18,6 +20,12 @@ class Renderer{
 
         //resize when window size changes:
         window.addEventListener("resize", this.setSize);
+
+        //pointer lock:
+        this.pointerLocked = false;
+        this.element.requestPointerLock = this.element.requestPointerLock;
+        this.element.addEventListener("click", () => this.lockPointer() );
+        document.addEventListener('pointerlockchange', this.pointerLockChange, false);
 
         this.renderer.domElement.id = "renderer";
     }
@@ -36,6 +44,25 @@ class Renderer{
 
     private setSize = (): void => {
         this.renderer.setSize( window.innerWidth, window.innerHeight );
+    }
+        
+    public lockPointer = ():void => {
+        this.element.requestPointerLock();
+        this.pointerLocked = true;
+    }
+    private unlockPointer = ():void => {
+        document.exitPointerLock();
+        this.pointerLocked = false;
+    }
+
+    private pointerLockChange = ():void => {
+        if(document.pointerLockElement !== this.element){
+            this.unlockPointer();
+        }
+    }
+
+    public get pointerIsLocked():boolean{
+        return this.pointerLocked;
     }
 
     public update(): void{

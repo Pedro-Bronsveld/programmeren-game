@@ -26,17 +26,32 @@ def export(export_levels_dir, export_models_dir, meshes_list):
             'r': round(scene.world.horizon_color.r * 255),
             'g': round(scene.world.horizon_color.g * 255),
             'b': round(scene.world.horizon_color.b * 255)
+        },
+        'player_start':{
+            'x': 0,
+            'y': 0,
+            'z': 0
         }
     }
     
     print("Starting level export.")
 
     scene_objects = scene.objects
+
+    #check if player starting position is set:
+    try:
+        player_start = scene_objects['player_start'].location
+        level['player_start']['x'] = player_start.x
+        level['player_start']['y'] = player_start.z
+        level['player_start']['z'] = player_start.y * -1
+
+    except:
+        print("Player start position not set, 0,0,0 will be used.")
     
     #loop through all objects in the scene:
     for scene_object in scene_objects:
         
-        if scene_object.type == 'MESH' or scene_object.type == 'LAMP':
+        if scene_object.type == 'MESH' or scene_object.type == 'LAMP' or scene_object.type == 'CAMERA':
             levelObj = {
                 'name': scene_object.name,
                 'model': scene_object.data.name,
@@ -81,7 +96,7 @@ def export(export_levels_dir, export_models_dir, meshes_list):
                     levelObj['data']['cast_shadow'] = True
                 
             level['objects'][scene_object.name] = levelObj
-        
+
         #export the mesh if it's not linked from another file:
         if scene_object.type == 'MESH' and scene_object.data.name in meshes_list:
             #check if exported object already contains the mesh:

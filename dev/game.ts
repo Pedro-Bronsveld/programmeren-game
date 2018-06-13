@@ -7,6 +7,8 @@ class Game{
     private propClock: THREE.Clock;
     private propHud: Hud;
     private propElement: HTMLElement;
+    private propMenu: Menu;
+    private eventManager: EventManager;
 
     private levelsData: Array<LevelSrcData>;
     private meshesData: Array<MeshData>;
@@ -16,18 +18,22 @@ class Game{
         this.meshesData = meshesData;
         this.propElement = <HTMLElement>document.getElementsByTagName("game")[0];
 
+        this.eventManager = new EventManager();
+
         //renderer
         this.propRenderer = new Renderer();
+        //hud:
+        this.propHud = new Hud(this);
+        //menu:
+        this.propMenu = new Menu(this);
 
         //level
-        this.propLevel = new Level(this, "level_1");
-        this.propLevel.assignToRenderer(this.propRenderer);
+        //this.propLevel = new Level(this, "level_1");
+        this.propLevel = new MainMenu(this);
+        //this.propLevel.assignToRenderer(this.propRenderer);
 
         //clock:
         this.propClock = new THREE.Clock();
-
-        //hud:
-        this.propHud = new Hud(this);
 
         //start gameloop
         this.gameloop();
@@ -39,6 +45,8 @@ class Game{
     public get clock():THREE.Clock{ return this.propClock };
     public get element():HTMLElement{ return this.propElement };
     public get hud():Hud{ return this.propHud };
+    public get menu():Menu{ return this.propMenu };
+    public get events():EventManager{ return this.eventManager };
 
     public getRenderer():Renderer{return this.propRenderer;}
 
@@ -62,23 +70,26 @@ class Game{
         return this.meshesData[0];
     }
 
+    public loadLevel(name: string):void{
+        this.propLevel = new Level(this, name);
+        //this.propLevel.assignToRenderer(this.propRenderer);
+        this.renderer.lockPointer();
+    }
+
     gameloop = () =>{
         
         //time in seconds passed between frames:
         let delta = this.propClock.getDelta();
 
-
         this.level.update(delta);
         
         this.renderer.update();
+
+        this.menu.update();
 
         this.hud.update();
 
         requestAnimationFrame( () => this.gameloop() );
     }
 
-
 }
-
-//start game on load:
-//window.addEventListener("load", () => game = new Game() );

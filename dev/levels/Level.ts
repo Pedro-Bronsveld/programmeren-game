@@ -7,12 +7,19 @@ class Level{
     private propSkyColor: RgbColor;
     private propGame: Game;
     private playerCamera: PlayerCamera;
+    private camera: Camera;
     private propPlayer: Player;
     readonly noCollisionModels: Array<string>;
     private noCollisionNames: Array<string>;
+    private isPaused: boolean;
+    readonly name: string;
 
     constructor(game: Game, levelName: string){
         this.propGame = game;
+        this.name = levelName;
+
+        //used to pause level update loop:
+        this.isPaused = false;
 
         //model names always ignored by collision boxes:
         this.noCollisionModels = ["bullet", "gun", "ShadowHelper", "skybox"];
@@ -28,6 +35,9 @@ class Level{
         this.playerCamera = new PlayerCamera(this, this.player);
         this.playerCamera.assignToRenderer(this.propGame.renderer);
         this.scene.add(this.playerCamera.camera);
+
+        //create regular camera:
+        this.camera = new Camera(this);
         
         //create an ambient light:
         this.ambientLight = new THREE.AmbientLight( 0xffffff );
@@ -36,12 +46,17 @@ class Level{
         //get level data by name from game object
         let levelSrcData: LevelSrcData = this.game.levelDataByName(levelName);
 
+        //set player position
+        this.player.pX = levelSrcData.player_start.x;
+        this.player.pY = levelSrcData.player_start.y;
+        this.player.pZ = levelSrcData.player_start.z;
+
         //level setup using level source data:
         this.propSkyColor = levelSrcData.horizon_color;
         this.ambientLight.intensity = levelSrcData.environment_light;
         //load the objects into the level:
         for(let key in levelSrcData.objects){
-            let obj : ObjectSource = levelSrcData.objects[key];
+            let obj : ObjectSource = Object.create(levelSrcData.objects[key]);
             
             //check if the model has its own class:
             if(obj.model == "turret_base"){
@@ -61,6 +76,13 @@ class Level{
         }
 
         new Skybox(this);
+
+        this.assignToRenderer(this.game.renderer);
+
+        //hide menu:
+        this.game.menu.visible = false;
+        //show hud:
+        this.game.hud.visible = true;
 
     }
 
@@ -83,8 +105,12 @@ class Level{
         renderer.scene = this.scene;
     }
 
-    public get cam():PlayerCamera{
+    public get playerCam():PlayerCamera{
         return this.playerCamera;
+    }
+
+    public get cam():Camera{
+        return this.camera;
     }
 
     public addModelOnly(model:Model){
@@ -150,20 +176,20 @@ class Level{
     }
 
     public update(delta: number): void{
-        
-        
 
-        //update models:
-        for(let model of this.models){
-            model.update(delta);
+        if(!this.isPaused){
+            //update models:
+            for(let model of this.models){
+                model.update(delta);
+            }
+    
+            //update lights:
+            for(let light of this.lights ){
+                light.update();
+            }
+    
+            this.playerCamera.update();
         }
-
-        //update lights:
-        for(let light of this.lights ){
-            light.update();
-        }
-
-        this.playerCamera.update();
         
     }
 }

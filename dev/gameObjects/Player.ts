@@ -263,7 +263,7 @@ class Player extends MobileModel{
 
     public rotateToView():void{
         //set y axis rotation equal to the camera:
-        let rotationY:number = this.level.cam.viewRotY;
+        let rotationY:number = this.level.playerCam.viewRotY;
         this.rY = rotationY;
     }
 

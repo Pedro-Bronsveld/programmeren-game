@@ -2,8 +2,6 @@ class PlayerCamera extends Camera{
     private targetModel: Player;
     private viewRotateX: number;
     private viewRotateY: number;
-    private renderElement: HTMLElement;
-    private pointerLocked: boolean;
     private yOffset: number;
     private distance: number;
     private defaultDistance: number;
@@ -22,9 +20,6 @@ class PlayerCamera extends Camera{
 
         this.viewRotateX = 0;
         this.viewRotateY = 0;
-        this.pointerLocked = false;
-
-        this.renderElement = this.level.game.renderer.element;
 
         //setup intersects filter:
         this.targetIntersectsFilter = new IntersectsFilter(this.level ,undefined, [this.targetModel.name]);
@@ -32,13 +27,6 @@ class PlayerCamera extends Camera{
 
         //add mouse event listeners:
         window.addEventListener("mousemove", this.mouseHandler);
-
-        this.renderElement.requestPointerLock = this.renderElement.requestPointerLock;
-            
-        document.exitPointerLock = document.exitPointerLock;
-
-        this.renderElement.addEventListener("click", this.lockPointer );
-        document.addEventListener('pointerlockchange', this.pointerLockChange, false);
 
         //add crosshair:
         let crosshair: Model = new Model(level, "crosshair", undefined, false);
@@ -88,28 +76,9 @@ class PlayerCamera extends Camera{
             return maxPoint;
         }
     }
-    
-    private lockPointer = ():void => {
-        this.renderElement.requestPointerLock();
-        this.pointerLocked = true;
-    }
-    private unlockPointer = ():void => {
-        document.exitPointerLock();
-        this.pointerLocked = false;
-    }
-
-    private pointerLockChange = ():void => {
-        if(document.pointerLockElement !== this.renderElement){
-            this.unlockPointer();
-        }
-    }
-
-    public get pointerIsLocked():boolean{
-        return this.pointerLocked;
-    }
 
     private mouseHandler = (e: MouseEvent) => {
-        if(this.pointerLocked){
+        if(this.level.game.renderer.pointerIsLocked){
 
             let sens:number = 0.0015;
 

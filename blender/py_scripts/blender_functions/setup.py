@@ -39,8 +39,11 @@ def setupScenes():
         description="Mesh receives shadow."
     )
 
-
-
+    #setup camera fov:
+    for camera in bpy.data.cameras:
+        camera.lens_unit = 'FOV'
+        #fov to 75:
+        camera.angle = 1.3089969158172607
 
     #setup panel:
 

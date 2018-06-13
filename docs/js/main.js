@@ -5,17 +5,19 @@ class Game {
             let delta = this.propClock.getDelta();
             this.level.update(delta);
             this.renderer.update();
+            this.menu.update();
             this.hud.update();
             requestAnimationFrame(() => this.gameloop());
         };
         this.levelsData = levelsData;
         this.meshesData = meshesData;
         this.propElement = document.getElementsByTagName("game")[0];
+        this.eventManager = new EventManager();
         this.propRenderer = new Renderer();
-        this.propLevel = new Level(this, "level_1");
-        this.propLevel.assignToRenderer(this.propRenderer);
-        this.propClock = new THREE.Clock();
         this.propHud = new Hud(this);
+        this.propMenu = new Menu(this);
+        this.propLevel = new MainMenu(this);
+        this.propClock = new THREE.Clock();
         this.gameloop();
     }
     get level() { return this.propLevel; }
@@ -27,6 +29,10 @@ class Game {
     get element() { return this.propElement; }
     ;
     get hud() { return this.propHud; }
+    ;
+    get menu() { return this.propMenu; }
+    ;
+    get events() { return this.eventManager; }
     ;
     getRenderer() { return this.propRenderer; }
     levelDataByName(name) {
@@ -44,6 +50,10 @@ class Game {
             }
         }
         return this.meshesData[0];
+    }
+    loadLevel(name) {
+        this.propLevel = new Level(this, name);
+        this.renderer.lockPointer();
     }
 }
 let game;
@@ -126,14 +136,42 @@ class PreLoad {
     }
 }
 window.addEventListener("load", () => new PreLoad());
-class Camera {
-    constructor(level) {
+class GameObject {
+    constructor(level, name, objectType) {
+        this.uniqueName = (name, level) => {
+            let uniqueName = name;
+            let num = 0;
+            let names = level.namesInUse();
+            while (names.indexOf(uniqueName) != -1) {
+                num++;
+                uniqueName = name + "." + num;
+            }
+            return uniqueName;
+        };
+        this.modelName = name;
+        this.propLevel = level;
+        this.name = this.uniqueName(name, this.level);
+        this.objectType = objectType;
+    }
+    get level() {
+        return this.propLevel;
+    }
+    get type() {
+        return this.objectType;
+    }
+}
+class Camera extends GameObject {
+    constructor(level, name = "Camera", position = new THREE.Vector3(), rotation = new THREE.Vector3()) {
+        super(level, name, "Camera");
         this.setSize = () => {
             this.camera.aspect = window.innerWidth / window.innerHeight;
             this.camera.updateProjectionMatrix();
         };
-        this.level = level;
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.09, 1000);
+        this.camera.rotation.x = rotation.x;
+        this.camera.rotation.y = rotation.y;
+        this.camera.rotation.z = rotation.z;
+        this.camera.position.set(position.x, position.y, position.z);
         window.addEventListener("resize", this.setSize);
     }
     getRotation() {
@@ -144,25 +182,48 @@ class Camera {
     }
     update() {
     }
+    get pX() { return this.camera.position.x; }
+    ;
+    get pY() { return this.camera.position.y; }
+    ;
+    get pZ() { return this.camera.position.z; }
+    ;
+    set pX(x) { this.camera.position.x = x; }
+    ;
+    set pY(y) { this.camera.position.y = y; }
+    ;
+    set pZ(z) { this.camera.position.z = z; }
+    ;
+    get posVector() { return new THREE.Vector3(this.pX, this.pY, this.pZ); }
+    set posVector(vector3) {
+        this.pX = vector3.x;
+        this.pY = vector3.y;
+        this.pZ = vector3.z;
+    }
+    get rX() { return this.camera.rotation.x; }
+    ;
+    get rY() { return this.camera.rotation.y; }
+    ;
+    get rZ() { return this.camera.rotation.z; }
+    ;
+    set rX(x) { this.camera.rotation.x = x; }
+    ;
+    set rY(y) { this.camera.rotation.y = y; }
+    ;
+    set rZ(z) { this.camera.rotation.z = z; }
+    ;
+    get rotVector() { return new THREE.Vector3(this.rX, this.rY, this.rZ); }
+    set rotVector(vector3) {
+        this.rX = vector3.x;
+        this.rY = vector3.y;
+        this.rZ = vector3.z;
+    }
 }
 class PlayerCamera extends Camera {
     constructor(level, model) {
         super(level);
-        this.lockPointer = () => {
-            this.renderElement.requestPointerLock();
-            this.pointerLocked = true;
-        };
-        this.unlockPointer = () => {
-            document.exitPointerLock();
-            this.pointerLocked = false;
-        };
-        this.pointerLockChange = () => {
-            if (document.pointerLockElement !== this.renderElement) {
-                this.unlockPointer();
-            }
-        };
         this.mouseHandler = (e) => {
-            if (this.pointerLocked) {
+            if (this.level.game.renderer.pointerIsLocked) {
                 let sens = 0.0015;
                 this.viewRotateX += e.movementY * sens;
                 this.viewRotateY -= e.movementX * sens;
@@ -182,15 +243,9 @@ class PlayerCamera extends Camera {
         this.distance = this.defaultDistance;
         this.viewRotateX = 0;
         this.viewRotateY = 0;
-        this.pointerLocked = false;
-        this.renderElement = this.level.game.renderer.element;
         this.targetIntersectsFilter = new IntersectsFilter(this.level, undefined, [this.targetModel.name]);
         this.cameraIntersectsFilter = new IntersectsFilter(this.level, ["turret_top"], [this.targetModel.name]);
         window.addEventListener("mousemove", this.mouseHandler);
-        this.renderElement.requestPointerLock = this.renderElement.requestPointerLock;
-        document.exitPointerLock = document.exitPointerLock;
-        this.renderElement.addEventListener("click", this.lockPointer);
-        document.addEventListener('pointerlockchange', this.pointerLockChange, false);
         let crosshair = new Model(level, "crosshair", undefined, false);
         var crosshairMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.75 });
         crosshair.material = crosshairMaterial;
@@ -217,9 +272,6 @@ class PlayerCamera extends Camera {
             maxPoint.z += this.camera.position.z;
             return maxPoint;
         }
-    }
-    get pointerIsLocked() {
-        return this.pointerLocked;
     }
     get viewRotY() {
         return this.viewRotateY;
@@ -269,6 +321,26 @@ class PlayerCamera extends Camera {
         cameraOffset.z += modelPos.z;
         this.camera.position.set(cameraOffset.x, cameraOffset.y, cameraOffset.z);
         this.camera.lookAt(cameraTarget);
+    }
+}
+class EventManager {
+    constructor() {
+        this.clear = () => {
+            for (let event of this.events) {
+                if (!event.permanent) {
+                    event.object.removeEventListener(event.event, event.func);
+                }
+            }
+        };
+        this.events = new Array();
+    }
+    add(object, event, func, permanent = true) {
+        this.events.push({
+            object: object,
+            event: event,
+            func: func,
+            permanent: permanent
+        });
     }
 }
 class LightSource {
@@ -333,6 +405,19 @@ class Renderer {
         this.setSize = () => {
             this.renderer.setSize(window.innerWidth, window.innerHeight);
         };
+        this.lockPointer = () => {
+            this.element.requestPointerLock();
+            this.pointerLocked = true;
+        };
+        this.unlockPointer = () => {
+            document.exitPointerLock();
+            this.pointerLocked = false;
+        };
+        this.pointerLockChange = () => {
+            if (document.pointerLockElement !== this.element) {
+                this.unlockPointer();
+            }
+        };
         this.assignedCamera = new THREE.PerspectiveCamera();
         this.assignedScene = new THREE.Scene();
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -341,6 +426,10 @@ class Renderer {
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         document.getElementsByTagName("game")[0].appendChild(this.renderer.domElement);
         window.addEventListener("resize", this.setSize);
+        this.pointerLocked = false;
+        this.element.requestPointerLock = this.element.requestPointerLock;
+        this.element.addEventListener("click", () => this.lockPointer());
+        document.addEventListener('pointerlockchange', this.pointerLockChange, false);
         this.renderer.domElement.id = "renderer";
     }
     get element() {
@@ -352,32 +441,11 @@ class Renderer {
     set camera(camera) {
         this.assignedCamera = camera;
     }
+    get pointerIsLocked() {
+        return this.pointerLocked;
+    }
     update() {
         this.renderer.render(this.assignedScene, this.assignedCamera);
-    }
-}
-class GameObject {
-    constructor(level, name, objectType) {
-        this.uniqueName = (name, level) => {
-            let uniqueName = name;
-            let num = 0;
-            let names = level.namesInUse();
-            while (names.indexOf(uniqueName) != -1) {
-                num++;
-                uniqueName = name + "." + num;
-            }
-            return uniqueName;
-        };
-        this.modelName = name;
-        this.propLevel = level;
-        this.name = this.uniqueName(name, this.level);
-        this.objectType = objectType;
-    }
-    get level() {
-        return this.propLevel;
-    }
-    get type() {
-        return this.objectType;
     }
 }
 class Model extends GameObject {
@@ -559,7 +627,6 @@ class Hud {
         this.game.element.appendChild(this.element);
         this.isVisible = false;
         this.healthbar = new Healthbar(this.game, this);
-        this.visible = true;
     }
     get visible() {
         return this.isVisible;
@@ -573,6 +640,38 @@ class Hud {
     }
     update() {
         this.healthbar.update();
+    }
+}
+class Menu {
+    constructor(game) {
+        this.game = game;
+        this.isVisible = false;
+        this.element = document.createElement("gamemenu");
+        this.game.element.appendChild(this.element);
+        this.buttonsContainer = document.createElement("buttonscontainer");
+        this.element.appendChild(this.buttonsContainer);
+        this.buttons = new Array();
+        this.addButton("start", () => this.start());
+        this.addButton("useless button", () => console.log("this button does nothing"));
+    }
+    addButton(name, buttonFunction) {
+        let button = document.createElement("menubutton");
+        button.addEventListener("click", () => buttonFunction());
+        button.innerHTML = name;
+        this.buttonsContainer.appendChild(button);
+        this.buttons.push(button);
+    }
+    start() {
+        this.game.loadLevel("level_1");
+    }
+    get visible() {
+        return this.isVisible;
+    }
+    set visible(visible) {
+        this.isVisible = visible;
+        this.element.dataset.visible = String(this.visible);
+    }
+    update() {
     }
 }
 class MobileModel extends Model {
@@ -764,7 +863,7 @@ class Gun extends Model {
                 this.fireState = 3;
             }
             else if (this.fireState == 3) {
-                let targetVector = this.level.cam.getTarget();
+                let targetVector = this.level.playerCam.getTarget();
                 new Bullet(this.level, this.getWorldMatrix(), targetVector, new THREE.Vector3(-5, -0.40, 0), [this.player.modelName], undefined, 0xff0000, 0.5);
                 this.fireState = 0;
             }
@@ -1036,7 +1135,7 @@ class Player extends MobileModel {
         }
     }
     rotateToView() {
-        let rotationY = this.level.cam.viewRotY;
+        let rotationY = this.level.playerCam.viewRotY;
         this.rY = rotationY;
     }
     getCameraRotation() {
@@ -1347,6 +1446,8 @@ class TurretTop extends Model {
 class Level {
     constructor(game, levelName) {
         this.propGame = game;
+        this.name = levelName;
+        this.isPaused = false;
         this.noCollisionModels = ["bullet", "gun", "ShadowHelper", "skybox"];
         this.noCollisionNames = [];
         this.scene = new THREE.Scene();
@@ -1357,13 +1458,17 @@ class Level {
         this.playerCamera = new PlayerCamera(this, this.player);
         this.playerCamera.assignToRenderer(this.propGame.renderer);
         this.scene.add(this.playerCamera.camera);
+        this.camera = new Camera(this);
         this.ambientLight = new THREE.AmbientLight(0xffffff);
         this.scene.add(this.ambientLight);
         let levelSrcData = this.game.levelDataByName(levelName);
+        this.player.pX = levelSrcData.player_start.x;
+        this.player.pY = levelSrcData.player_start.y;
+        this.player.pZ = levelSrcData.player_start.z;
         this.propSkyColor = levelSrcData.horizon_color;
         this.ambientLight.intensity = levelSrcData.environment_light;
         for (let key in levelSrcData.objects) {
-            let obj = levelSrcData.objects[key];
+            let obj = Object.create(levelSrcData.objects[key]);
             if (obj.model == "turret_base") {
                 new TurretBase(this, obj);
             }
@@ -1378,6 +1483,9 @@ class Level {
             }
         }
         new Skybox(this);
+        this.assignToRenderer(this.game.renderer);
+        this.game.menu.visible = false;
+        this.game.hud.visible = true;
     }
     get player() {
         return this.propPlayer;
@@ -1394,8 +1502,11 @@ class Level {
     assignToRenderer(renderer) {
         renderer.scene = this.scene;
     }
-    get cam() {
+    get playerCam() {
         return this.playerCamera;
+    }
+    get cam() {
+        return this.camera;
     }
     addModelOnly(model) {
         this.models.push(model);
@@ -1448,13 +1559,27 @@ class Level {
         return names;
     }
     update(delta) {
-        for (let model of this.models) {
-            model.update(delta);
+        if (!this.isPaused) {
+            for (let model of this.models) {
+                model.update(delta);
+            }
+            for (let light of this.lights) {
+                light.update();
+            }
+            this.playerCamera.update();
         }
-        for (let light of this.lights) {
-            light.update();
-        }
-        this.playerCamera.update();
+    }
+}
+class MainMenu extends Level {
+    constructor(game) {
+        super(game, "main_menu");
+        this.cam.assignToRenderer(this.game.renderer);
+        this.cam.pY = 50;
+        this.cam.pZ = 25;
+        this.game.hud.visible = false;
+        this.game.menu.visible = true;
+    }
+    update() {
     }
 }
 //# sourceMappingURL=main.js.map
