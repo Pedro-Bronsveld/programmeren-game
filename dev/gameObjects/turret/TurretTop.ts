@@ -4,7 +4,7 @@ class TurretTop extends Model{
     private turretBase: TurretBase;
     private intersectsFilter: IntersectsFilter;
     private targetOffset: THREE.Vector3;
-    //private turnSpeed: number;
+    private playerSpotted: boolean;
     
     private health: number;
     private destroyed: boolean;
@@ -17,6 +17,8 @@ class TurretTop extends Model{
         this.intersectsFilter = new IntersectsFilter(this.level, ["practice_target"], [this.name, this.turretBase.name]);
         this.targetOffset = new THREE.Vector3(0, 3.5, 0);
         //this.turnSpeed = Math.PI;
+
+        this.playerSpotted = false;
 
         this.health = 100;
         this.destroyed = false;
@@ -116,10 +118,11 @@ class TurretTop extends Model{
                 this.target = newTarget;
     
                 this.mesh.lookAt(this.target);
+                this.playerSpotted = true;
     
             }
     
-            if(this.cooldown <= 0){
+            if(this.cooldown <= 0 && this.playerSpotted){
                 this.fire();
                 this.cooldown = 1;
             }
