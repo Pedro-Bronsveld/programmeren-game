@@ -92,7 +92,7 @@ class Player extends MobileModel{
 
     }
 
-    public hit(){
+    public hit():void{
         if(this.health > 0){
             this.health -= 10;
         }

@@ -62,7 +62,7 @@ class Bullet extends MobileModel{
 
             // check for colision
             if(front.distance <= 0 && front.intersected ){
-                this.collided(front);
+                this.colided(front);
                 return;
             }
 
@@ -73,7 +73,7 @@ class Bullet extends MobileModel{
             if(front.distance < amount && front.intersected){
                 amount = front.distance + 0.5;
                 this.mesh.translateZ(amount);
-                this.collided(front);
+                this.colided(front);
                 return;
             }
 
@@ -86,7 +86,7 @@ class Bullet extends MobileModel{
 
     }
 
-    private collided(rayData: RayData):void{
+    private colided(rayData: RayData):void{
         // set movement to 0
         this.moving.forward = 0;
 
