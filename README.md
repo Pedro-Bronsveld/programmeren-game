@@ -1,6 +1,9 @@
 # programmeren-game
 [>> Link naar game. <<](https://pedro-bronsveld.github.io/programmeren-game/)
 
+## UML diagram
+![UML Diagram](uml_diagram.png)
+
 ## feedback game Lem
 [Repository](https://github.com/boltgolt/prg4-game)
 
