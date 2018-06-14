@@ -8,14 +8,23 @@ Deze verdeling van code over verschillende classes houd de code overzichtelijk.
 ### Encapsulation
 Iedere class is verantwoordelijk voor zijn eigen eigenschappen. Om deze reden zijn deze eigenschappen private. 
 Sommige functies van de classes zijn public waardoor de verschillende classes elkaar kunnen aanspreken.
+Protected properties zorgen ervoor dat een eigenschap ook te gebruiken is door een class die wordt extend.
 ### Composition
 De game begint met een alles bevattend 'Game' object. Het game object bevat een 'Level' object waarin het level geladen wordt.
 Het level bevat een array met daarin alle 'GameObjects'. Ook bevat het level de 'Player'. 
 Doordat het level een object in game is, kan op ieder moment een ander level geladen worden.
 Ook zorgt composition er voor dat objecten gebruik kunnen maken van de three.js library.
+```
+class Level{
+    private propGame: Game;
+    private propPlayer: Player;
+```
 ### Inheritance
 Verschillende classes extenden elkaar om overeenkomende functies te kunnen hergebruiken.
-De 'MobileModel' class extend de 'Model' class. Beide classen hebben een positie in de wereld, maar alleen MobileModel kan zich door de wereld bewegen. 
+De 'MobileModel' class extend de 'Model' class. Beide classen hebben een positie in de wereld, maar alleen MobileModel kan zich door de wereld bewegen.
+```
+class Model extends GameObject{
+```
 
 ## UML diagram
 ![UML Diagram](uml_diagram.png)
