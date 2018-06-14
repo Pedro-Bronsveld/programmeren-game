@@ -7,5 +7,6 @@ interface LevelSrcData{
         x:number;
         y:number;
         z:number;
-    }
+    },
+    view_rotate:number;
 }

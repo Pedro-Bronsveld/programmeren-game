@@ -31,7 +31,8 @@ def export(export_levels_dir, export_models_dir, meshes_list):
             'x': 0,
             'y': 0,
             'z': 0
-        }
+        },
+        'view_rotate': 0
     }
     
     print("Starting level export.")
@@ -40,10 +41,12 @@ def export(export_levels_dir, export_models_dir, meshes_list):
 
     #check if player starting position is set:
     try:
-        player_start = scene_objects['player_start'].location
-        level['player_start']['x'] = player_start.x
-        level['player_start']['y'] = player_start.z
-        level['player_start']['z'] = player_start.y * -1
+        player_start = scene_objects['player_start']
+        level['player_start']['x'] = player_start.location.x
+        level['player_start']['y'] = player_start.location.z
+        level['player_start']['z'] = player_start.location.y * -1
+        level['view_rotate'] = player_start.rotation_euler.z
+        
 
     except:
         print("Player start position not set, 0,0,0 will be used.")

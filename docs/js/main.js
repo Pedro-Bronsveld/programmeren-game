@@ -225,7 +225,7 @@ class Camera extends GameObject {
     }
 }
 class PlayerCamera extends Camera {
-    constructor(level, model) {
+    constructor(level, model, viewRotate = 0) {
         super(level);
         this.mouseHandler = (e) => {
             if (this.level.game.renderer.pointerIsLocked) {
@@ -258,6 +258,7 @@ class PlayerCamera extends Camera {
         crosshair.sY = 0.002;
         crosshair.sX = 0.002;
         this.camera.add(crosshair.getMesh());
+        this.viewRotateY = viewRotate;
     }
     getTarget() {
         let direction = new THREE.Vector3(0, 0, -1);
@@ -1548,14 +1549,14 @@ class Level {
         this.propSkyColor = { r: 255, g: 255, b: 255 };
         this.models = new Array();
         this.lights = new Array();
+        let levelSrcData = this.game.levelDataByName(levelName);
         this.propPlayer = new Player(this);
-        this.playerCamera = new PlayerCamera(this, this.player);
+        this.playerCamera = new PlayerCamera(this, this.player, levelSrcData.view_rotate);
         this.playerCamera.assignToRenderer(this.propGame.renderer);
         this.scene.add(this.playerCamera.camera);
         this.camera = new Camera(this);
         this.ambientLight = new THREE.AmbientLight(0xffffff);
         this.scene.add(this.ambientLight);
-        let levelSrcData = this.game.levelDataByName(levelName);
         this.player.pX = levelSrcData.player_start.x;
         this.player.pY = levelSrcData.player_start.y;
         this.player.pZ = levelSrcData.player_start.z;

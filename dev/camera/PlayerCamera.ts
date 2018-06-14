@@ -8,7 +8,7 @@ class PlayerCamera extends Camera{
     private targetIntersectsFilter: IntersectsFilter;
     private cameraIntersectsFilter: IntersectsFilter;
 
-    constructor(level: Level, model: Player){
+    constructor(level: Level, model: Player, viewRotate:number=0){
         super(level);
         this.targetModel = model;
 
@@ -39,6 +39,9 @@ class PlayerCamera extends Camera{
 
         // add crosshair to camera
         this.camera.add(crosshair.getMesh());
+
+        // change what way player is facing
+        this.viewRotateY = viewRotate;
         
     }
 

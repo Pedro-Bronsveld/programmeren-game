@@ -31,9 +31,13 @@ class Level{
         this.propSkyColor = {r: 255, g: 255, b:255};
         this.models = new Array<Model>();
         this.lights = new Array<Light>();
+
+        // get level data by name from game object
+        let levelSrcData: LevelSrcData = this.game.levelDataByName(levelName);
         
+        // create player and player camera
         this.propPlayer = new Player(this);
-        this.playerCamera = new PlayerCamera(this, this.player);
+        this.playerCamera = new PlayerCamera(this, this.player, levelSrcData.view_rotate);
         this.playerCamera.assignToRenderer(this.propGame.renderer);
         this.scene.add(this.playerCamera.camera);
 
@@ -43,9 +47,6 @@ class Level{
         // create an ambient light
         this.ambientLight = new THREE.AmbientLight( 0xffffff );
         this.scene.add(this.ambientLight);
-
-        // get level data by name from game object
-        let levelSrcData: LevelSrcData = this.game.levelDataByName(levelName);
 
         // set player position
         this.player.pX = levelSrcData.player_start.x;
