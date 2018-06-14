@@ -79,6 +79,16 @@ buttonscontainer{
     
 }
 
+headertext{
+    position: relative;
+    display: inline-block;
+    width: 300px;
+    height: 100px;
+    vertical-align: middle;
+    color: white;
+    font-size: 35px;
+}
+
 menubutton{
     display: none;
     position: relative;

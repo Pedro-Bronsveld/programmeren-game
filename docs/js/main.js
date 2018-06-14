@@ -413,9 +413,11 @@ class Renderer {
         };
         this.lockPointer = () => {
             this.element.requestPointerLock();
+            this.pointerLocked = true;
         };
         this.unlockPointer = () => {
             document.exitPointerLock();
+            this.pointerLocked = false;
         };
         this.pointerLockChange = () => {
             if (document.pointerLockElement !== this.element) {
@@ -669,12 +671,15 @@ class Menu {
         this.game.element.appendChild(this.element);
         this.buttonsContainer = document.createElement("buttonscontainer");
         this.element.appendChild(this.buttonsContainer);
+        this.headerElement = document.createElement("headertext");
+        this.buttonsContainer.appendChild(this.headerElement);
+        this.headerText = "Main Menu";
         this.buttons = new Array();
         this.addButton(new MenuButton("start", () => this.start(), ["main"], true));
         this.addButton(new MenuButton("continue", () => this.continue(), ["pause"], true));
         this.addButton(new MenuButton("reload level", () => this.reload(), ["pause", "dead"], true));
         this.addButton(new MenuButton("quit", () => this.quit(), ["pause", "dead"], true));
-        window.addEventListener("keypress", (e) => this.keyHandler(e));
+        document.addEventListener("keydown", (e) => this.keyHandler(e));
         this.setState("main");
     }
     addButton(button) {
@@ -692,6 +697,13 @@ class Menu {
             }
         }
     }
+    get header() {
+        return this.headerText;
+    }
+    set header(text) {
+        this.headerText = text;
+        this.headerElement.innerHTML = text;
+    }
     setState(state) {
         if (state != this.state) {
             this.state = state;
@@ -703,14 +715,25 @@ class Menu {
                     button.visible = false;
                 }
             }
+            switch (state) {
+                case "main":
+                    this.header = "Main Menu";
+                    break;
+                case "pause":
+                    this.header = "Game Paused";
+                    break;
+                case "dead":
+                    this.header = "You Died";
+                    break;
+            }
         }
     }
     start() {
         this.game.loadLevel("level_1");
     }
     continue() {
-        this.game.renderer.lockPointer();
         this.visible = false;
+        this.game.renderer.lockPointer();
     }
     reload() {
         this.game.loadLevel(this.game.level.name);
@@ -722,6 +745,9 @@ class Menu {
         return this.isVisible;
     }
     set visible(visible) {
+        if (visible == false && this.state == "dead") {
+            return;
+        }
         if (visible != this.visible) {
             this.isVisible = visible;
             this.element.dataset.visible = String(this.visible);
@@ -1127,6 +1153,7 @@ class Player extends MobileModel {
         this.health = this.maxHealth;
         this.health = 100;
         this.dead = false;
+        this.timeSinceDeath = 0;
         this.forward = false;
         this.backward = false;
         this.left = false;
@@ -1222,6 +1249,13 @@ class Player extends MobileModel {
     }
     update(delta) {
         super.update(delta);
+        if (this.dead) {
+            this.timeSinceDeath += delta;
+            if (this.timeSinceDeath > 1.5) {
+                this.level.game.menu.visible = true;
+                this.level.game.renderer.unlockPointer();
+            }
+        }
     }
 }
 class PracticeTarget extends Model {

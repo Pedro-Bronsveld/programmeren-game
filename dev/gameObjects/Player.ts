@@ -24,6 +24,7 @@ class Player extends MobileModel{
     private health: number;
     private maxHealth: number;
     private dead: boolean;
+    private timeSinceDeath: number;
 
     constructor(level: Level){
         super(level, "player");
@@ -36,6 +37,7 @@ class Player extends MobileModel{
         this.health = this.maxHealth;
         this.health = 100;
         this.dead = false;
+        this.timeSinceDeath = 0;
 
         // set initial key states
         this.forward = false;
@@ -270,6 +272,16 @@ class Player extends MobileModel{
     public update(delta: number){
             
         super.update(delta);
+
+        if(this.dead){
+            this.timeSinceDeath += delta;
+
+            // show game over screen after dying
+            if(this.timeSinceDeath > 1.5){
+                this.level.game.menu.visible = true;
+                this.level.game.renderer.unlockPointer();
+            }
+        }
 
     }
 

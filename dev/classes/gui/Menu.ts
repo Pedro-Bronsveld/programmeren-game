@@ -5,6 +5,8 @@ class Menu{
     private buttons: Array<MenuButton>;
     private isVisible: boolean;
     private state: string;
+    private headerElement: HTMLElement;
+    private headerText: string;
 
     constructor(game: Game){
         this.game = game;
@@ -22,6 +24,11 @@ class Menu{
         this.buttonsContainer = document.createElement("buttonscontainer");
         this.element.appendChild(this.buttonsContainer);
 
+        //create title
+        this.headerElement = document.createElement("headertext");
+        this.buttonsContainer.appendChild(this.headerElement);
+        this.headerText = "Main Menu";
+
         // create the buttons in the menu
         this.buttons = new Array<MenuButton>();
         // create the start button
@@ -34,7 +41,7 @@ class Menu{
         // create quit button
         this.addButton( new MenuButton("quit", () => this.quit(), ["pause", "dead"], true ) );
 
-        window.addEventListener("keypress", (e:KeyboardEvent) => this.keyHandler(e) );
+        document.addEventListener("keydown", (e:KeyboardEvent) => this.keyHandler(e) );
 
         // set state of menu
         this.setState("main");
@@ -59,6 +66,14 @@ class Menu{
         }
     }
 
+    private get header():string{
+        return this.headerText;
+    }
+    private set header(text:string){
+        this.headerText = text;
+        this.headerElement.innerHTML = text;
+    }
+
     private setState(state: string):void{
         if(state != this.state){
             this.state = state;
@@ -71,6 +86,19 @@ class Menu{
                     button.visible = false;
                 }
             }
+
+            // set header text accordingly
+            switch(state){
+                case "main":
+                    this.header = "Main Menu";
+                    break;
+                case "pause":
+                    this.header = "Game Paused";
+                    break;
+                case "dead":
+                    this.header = "You Died";
+                    break;
+            }
         }
     }
 
@@ -79,8 +107,8 @@ class Menu{
         this.game.loadLevel("level_1");
     }
     private continue():void{
-        this.game.renderer.lockPointer();
         this.visible = false;
+        this.game.renderer.lockPointer();
     }
     private reload():void{
         this.game.loadLevel(this.game.level.name);
@@ -94,6 +122,11 @@ class Menu{
         return this.isVisible;
     }
     public set visible(visible:boolean){
+        //don't hide menu if the gameover screen is up
+        if(visible == false && this.state == "dead"){
+            return;
+        }
+
         if(visible != this.visible){
             this.isVisible = visible;
             this.element.dataset.visible = String(this.visible);

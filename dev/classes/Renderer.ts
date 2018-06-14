@@ -48,9 +48,11 @@ class Renderer{
         
     public lockPointer = ():void => {
         this.element.requestPointerLock();
+        this.pointerLocked = true;
     }
     public unlockPointer = ():void =>{
         document.exitPointerLock();
+        this.pointerLocked = false;
     }
 
     private pointerLockChange = ():void => {
