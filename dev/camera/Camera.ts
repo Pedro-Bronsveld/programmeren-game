@@ -6,7 +6,7 @@ class Camera extends GameObject{
     constructor(level: Level, name:string="Camera", position:THREE.Vector3=new THREE.Vector3(), rotation:THREE.Vector3=new THREE.Vector3()){
         super(level, name, "Camera");
         // create camera
-        this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.09, 1000);
+        this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.09, 2000);
         // this.orbit = new THREE.OrbitControls(this.camera);
         
         this.camera.rotation.x = rotation.x;

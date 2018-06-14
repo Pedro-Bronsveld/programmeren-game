@@ -80,6 +80,7 @@ buttonscontainer{
 }
 
 menubutton{
+    display: none;
     position: relative;
     width: 100%;
     height: 50px;
@@ -91,6 +92,9 @@ menubutton{
     line-height: 50px;
     font-size: 30px;
     transition: transform 0.1s;
+}
+menubutton[data-visible="true"]{
+    display: block;
 }
 menubutton:hover{
     transform: scale(1.05);

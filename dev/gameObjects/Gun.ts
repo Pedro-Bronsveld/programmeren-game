@@ -52,7 +52,7 @@ class Gun extends Model{
             else if(this.fireState == 2){
                 // create bullet
                 let targetVector: THREE.Vector3 = this.level.playerCam.getTarget();
-                new Bullet(this.level, this.getWorldMatrix(), targetVector, new THREE.Vector3(-5, -0.40, 0), [this.player.modelName], undefined, 0xff0000, 0.5);
+                new Bullet(this.level, this.getWorldMatrix(), targetVector, new THREE.Vector3(-5, -0.40, 0), [this.player.modelName], undefined, 0xff0000);
                 this.fireState = 0;
             }
         }

@@ -53,12 +53,12 @@ class Model extends GameObject{
         this.rotVector = new THREE.Vector3(this.modelSource.rotation.x, this.modelSource.rotation.y, this.modelSource.rotation.z);
         this.scaleVector = new THREE.Vector3(this.modelSource.scale.x, this.modelSource.scale.y, this.modelSource.scale.z);
         
-    }   
-
-    protected afterMeshLoad():void{
     }
 
-    public hit():void{}
+    public hit():number{
+        // return number of seconds before bullet should despawn
+        return 1;
+    }
 
     public getMesh():THREE.Mesh | THREE.SkinnedMesh{
         return this.mesh;

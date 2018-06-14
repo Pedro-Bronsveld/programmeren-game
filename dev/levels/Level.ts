@@ -13,6 +13,7 @@ class Level{
     private noCollisionNames: Array<string>;
     private isPaused: boolean;
     readonly name: string;
+    private skybox: Skybox;
 
     constructor(game: Game, levelName: string){
         this.propGame = game;
@@ -75,18 +76,13 @@ class Level{
             }
         }
 
-        new Skybox(this);
+        this.skybox = new Skybox(this, parseInt( "0x" + utils.toHEX(this.propSkyColor) ));
 
         this.assignToRenderer(this.game.renderer);
 
-        // hide menu
-        this.game.menu.visible = false;
-        // show hud
-        this.game.hud.visible = true;
-
     }
 
-    // getters
+    // getters and setters
     public get player():Player{
         return this.propPlayer;
     }
@@ -100,6 +96,9 @@ class Level{
     public getScene():THREE.Scene{
         return this.scene;
     }
+
+    public get paused():boolean{ return this.isPaused }
+    public set paused(paused:boolean){ this.isPaused = paused }
 
     public assignToRenderer(renderer: Renderer): void{
         renderer.scene = this.scene;
@@ -189,6 +188,8 @@ class Level{
             }
     
             this.playerCamera.update();
+
+            this.skybox.update();
         }
         
     }

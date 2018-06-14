@@ -24,7 +24,7 @@ class TurretTop extends Model{
         this.destroyed = false;
     }
 
-    public hit():void{
+    public hit():number{
         if(this.health > 0){
             this.health -= 10;
         }
@@ -41,6 +41,7 @@ class TurretTop extends Model{
 
             this.playAction("destroy", 0);
         }
+        return 0.5;
     }
 
     /*
@@ -88,7 +89,7 @@ class TurretTop extends Model{
     */
 
     public fire():void{
-        new Bullet(this.level, this.mesh.matrixWorld, this.target, new THREE.Vector3(0,0,7), undefined, [this.name, this.turretBase.name], 0xccff00, 0.05 );
+        new Bullet(this.level, this.mesh.matrixWorld, this.target, new THREE.Vector3(0,0,7), undefined, [this.name, this.turretBase.name], 0xccff00 );
     }
 
     public update(delta:number):void{

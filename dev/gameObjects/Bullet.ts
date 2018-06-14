@@ -3,7 +3,6 @@
 class Bullet extends MobileModel{
 
     private despawnTimeout:number;
-    private timeAfterHit:number;
 
     constructor(
         level: Level,
@@ -13,7 +12,6 @@ class Bullet extends MobileModel{
         ignoreModels:Array<string>=new Array<string>(),
         ignoreNames:Array<string>=new Array<string>(),
         color:number=0xff0000,
-        timeAfterHit:number=1
         ){
         super(level, "bullet");
         
@@ -23,9 +21,6 @@ class Bullet extends MobileModel{
         // change material of bullet
         var bulletMaterial = new THREE.MeshBasicMaterial( { color: color } );
         this.mesh.material = bulletMaterial;
-
-        // time before bullet despawns after hitting something in seconds.
-        this.timeAfterHit = timeAfterHit;
 
         // time in seconds before bullet despawns without hitting anything
         this.despawnTimeout = 5;
@@ -80,9 +75,6 @@ class Bullet extends MobileModel{
             this.mesh.translateZ(amount);
 
         }
-        else if(this.despawnTimeout > this.timeAfterHit){
-            this.despawnTimeout = this.timeAfterHit;
-        }
 
     }
 
@@ -90,12 +82,9 @@ class Bullet extends MobileModel{
         // set movement to 0
         this.moving.forward = 0;
 
-        // set bullet to despawn after x seconds
-        this.despawnTimeout = this.timeAfterHit;
-
         // tell model it was hit
         let model:Model = this.level.getModelByName(rayData.model.userData.uniqueName)!;
-        model.hit();
+        this.despawnTimeout = model.hit();
     }
 
     public remove():void{

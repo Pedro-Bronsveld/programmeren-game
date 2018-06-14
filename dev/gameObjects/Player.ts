@@ -87,12 +87,7 @@ class Player extends MobileModel{
     public get maxHp():number{ return this.maxHealth; }
     public get isDead():boolean{ return this.dead };
 
-    protected afterMeshLoad(){
-        super.afterMeshLoad();
-
-    }
-
-    public hit():void{
+    public hit():number{
         if(this.health > 0){
             this.health -= 10;
         }
@@ -105,6 +100,7 @@ class Player extends MobileModel{
             this.dead = true;
             this.playAction("death", 0);
         }
+        return 0.05;
     }
 
     private keyDownHandler = (e: KeyboardEvent):void => {

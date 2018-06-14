@@ -5,8 +5,8 @@ class Game {
             let delta = this.propClock.getDelta();
             this.level.update(delta);
             this.renderer.update();
-            this.menu.update();
             this.hud.update();
+            this.menu.update();
             requestAnimationFrame(() => this.gameloop());
         };
         this.levelsData = levelsData;
@@ -14,8 +14,8 @@ class Game {
         this.propElement = document.getElementsByTagName("game")[0];
         this.eventManager = new EventManager();
         this.propRenderer = new Renderer();
-        this.propHud = new Hud(this);
         this.propMenu = new Menu(this);
+        this.propHud = new Hud(this);
         this.propLevel = new MainMenu(this);
         this.propClock = new THREE.Clock();
         this.gameloop();
@@ -52,8 +52,13 @@ class Game {
         return this.meshesData[0];
     }
     loadLevel(name) {
-        this.propLevel = new Level(this, name);
-        this.renderer.lockPointer();
+        if (name == "main_menu") {
+            this.propLevel = new MainMenu(this);
+        }
+        else {
+            this.propLevel = new Level(this, name);
+            this.renderer.lockPointer();
+        }
     }
 }
 let game;
@@ -167,7 +172,7 @@ class Camera extends GameObject {
             this.camera.aspect = window.innerWidth / window.innerHeight;
             this.camera.updateProjectionMatrix();
         };
-        this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.09, 1000);
+        this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.09, 2000);
         this.camera.rotation.x = rotation.x;
         this.camera.rotation.y = rotation.y;
         this.camera.rotation.z = rotation.z;
@@ -407,15 +412,16 @@ class Renderer {
         };
         this.lockPointer = () => {
             this.element.requestPointerLock();
-            this.pointerLocked = true;
         };
         this.unlockPointer = () => {
             document.exitPointerLock();
-            this.pointerLocked = false;
         };
         this.pointerLockChange = () => {
             if (document.pointerLockElement !== this.element) {
-                this.unlockPointer();
+                this.pointerLocked = false;
+            }
+            else {
+                this.pointerLocked = true;
             }
         };
         this.assignedCamera = new THREE.PerspectiveCamera();
@@ -480,9 +486,9 @@ class Model extends GameObject {
         this.rotVector = new THREE.Vector3(this.modelSource.rotation.x, this.modelSource.rotation.y, this.modelSource.rotation.z);
         this.scaleVector = new THREE.Vector3(this.modelSource.scale.x, this.modelSource.scale.y, this.modelSource.scale.z);
     }
-    afterMeshLoad() {
+    hit() {
+        return 1;
     }
-    hit() { }
     getMesh() {
         return this.mesh;
     }
@@ -581,12 +587,15 @@ class Model extends GameObject {
     }
 }
 class Skybox extends Model {
-    constructor(level) {
+    constructor(level, color = 0x0077ff) {
         super(level, "skybox");
-        this.mesh.material = new THREE.MeshBasicMaterial({ color: 0x0077ff });
-        this.sX = 3;
-        this.sY = 3;
-        this.sZ = 3;
+        this.mesh.material = new THREE.MeshBasicMaterial({ color: color });
+        this.sX = 10;
+        this.sY = 10;
+        this.sZ = 10;
+    }
+    update() {
+        this.posVector = this.level.player.posVector;
     }
 }
 class Utils {
@@ -632,46 +641,125 @@ class Hud {
         return this.isVisible;
     }
     set visible(visible) {
-        this.isVisible = visible;
-        this.element.dataset.visible = String(this.isVisible);
+        if (visible != this.visible) {
+            this.isVisible = visible;
+            this.element.dataset.visible = String(this.isVisible);
+        }
     }
     get element() {
         return this.propElement;
     }
     update() {
         this.healthbar.update();
+        if (this.game.level.paused || this.game.level.name == "main_menu") {
+            this.visible = false;
+        }
+        else {
+            this.visible = true;
+        }
     }
 }
 class Menu {
     constructor(game) {
         this.game = game;
         this.isVisible = false;
+        this.state = "pause";
         this.element = document.createElement("gamemenu");
         this.game.element.appendChild(this.element);
         this.buttonsContainer = document.createElement("buttonscontainer");
         this.element.appendChild(this.buttonsContainer);
         this.buttons = new Array();
-        this.addButton("start", () => this.start());
-        this.addButton("useless button", () => console.log("this button does nothing"));
+        this.addButton(new MenuButton("start", () => this.start(), ["main"], true));
+        this.addButton(new MenuButton("continue", () => this.continue(), ["pause"], true));
+        this.addButton(new MenuButton("reload level", () => this.reload(), ["pause", "dead"], true));
+        this.addButton(new MenuButton("quit", () => this.quit(), ["pause", "dead"], true));
+        window.addEventListener("keypress", (e) => this.keyHandler(e));
+        this.setState("main");
     }
-    addButton(name, buttonFunction) {
-        let button = document.createElement("menubutton");
-        button.addEventListener("click", () => buttonFunction());
-        button.innerHTML = name;
-        this.buttonsContainer.appendChild(button);
+    addButton(button) {
         this.buttons.push(button);
+        this.buttonsContainer.appendChild(button.element);
+    }
+    keyHandler(e) {
+        if (e.keyCode == 13) {
+            this.visible = !this.visible;
+            if (this.visible) {
+                this.game.renderer.unlockPointer();
+            }
+            else {
+                this.game.renderer.lockPointer();
+            }
+        }
+    }
+    setState(state) {
+        if (state != this.state) {
+            this.state = state;
+            for (let button of this.buttons) {
+                if (button.states.indexOf(state) != -1) {
+                    button.visible = true;
+                }
+                else {
+                    button.visible = false;
+                }
+            }
+        }
     }
     start() {
         this.game.loadLevel("level_1");
+    }
+    continue() {
+        this.game.renderer.lockPointer();
+        this.visible = false;
+    }
+    reload() {
+        this.game.loadLevel(this.game.level.name);
+    }
+    quit() {
+        this.game.loadLevel("main_menu");
     }
     get visible() {
         return this.isVisible;
     }
     set visible(visible) {
-        this.isVisible = visible;
-        this.element.dataset.visible = String(this.visible);
+        if (visible != this.visible) {
+            this.isVisible = visible;
+            this.element.dataset.visible = String(this.visible);
+            if (this.state != "main") {
+                this.game.level.paused = visible;
+            }
+        }
     }
     update() {
+        this.visible = this.game.level.paused || this.game.level.name == "main_menu" || !this.game.renderer.pointerIsLocked;
+        if (this.game.level.name == "main_menu") {
+            this.setState("main");
+        }
+        else if (this.game.level.player.isDead) {
+            this.setState("dead");
+        }
+        else {
+            this.setState("pause");
+        }
+    }
+}
+class MenuButton {
+    constructor(name, func, states, visible = false) {
+        this.el = document.createElement("menubutton");
+        this.el.addEventListener("click", () => func());
+        this.name = name;
+        this.el.innerHTML = name;
+        this.isVisible = visible;
+        this.states = states;
+        this.visible = visible;
+    }
+    get element() { return this.el; }
+    ;
+    get visible() {
+        return this.isVisible;
+    }
+    set visible(visible) {
+        this.isVisible = visible;
+        this.element.dataset.visible = String(visible);
     }
 }
 class MobileModel extends Model {
@@ -779,13 +867,12 @@ class MobileModel extends Model {
     }
 }
 class Bullet extends MobileModel {
-    constructor(level, worldMatrix, target, barelOffset, ignoreModels = new Array(), ignoreNames = new Array(), color = 0xff0000, timeAfterHit = 1) {
+    constructor(level, worldMatrix, target, barelOffset, ignoreModels = new Array(), ignoreNames = new Array(), color = 0xff0000) {
         super(level, "bullet");
         this.hasCollision = true;
         this.collisionBox = new CollisionBox(this, 1, 0.9, 6, 0, 0, -1.5, 5, false, true, new THREE.Vector3(1, 1, 1), true, ignoreModels, ignoreNames);
         var bulletMaterial = new THREE.MeshBasicMaterial({ color: color });
         this.mesh.material = bulletMaterial;
-        this.timeAfterHit = timeAfterHit;
         this.despawnTimeout = 5;
         let position = new THREE.Vector3();
         position.x = barelOffset.x;
@@ -805,27 +892,23 @@ class Bullet extends MobileModel {
         if (this.moving.forward > 0) {
             let front = this.collisionBox.front();
             if (front.distance <= 0 && front.intersected) {
-                this.collided(front);
+                this.colided(front);
                 return;
             }
             let amount = this.velocity * delta;
             if (front.distance < amount && front.intersected) {
                 amount = front.distance + 0.5;
                 this.mesh.translateZ(amount);
-                this.collided(front);
+                this.colided(front);
                 return;
             }
             this.mesh.translateZ(amount);
         }
-        else if (this.despawnTimeout > this.timeAfterHit) {
-            this.despawnTimeout = this.timeAfterHit;
-        }
     }
-    collided(rayData) {
+    colided(rayData) {
         this.moving.forward = 0;
-        this.despawnTimeout = this.timeAfterHit;
         let model = this.level.getModelByName(rayData.model.userData.uniqueName);
-        model.hit();
+        this.despawnTimeout = model.hit();
     }
     remove() {
         this.level.removeModel(this);
@@ -861,7 +944,7 @@ class Gun extends Model {
             }
             else if (this.fireState == 2) {
                 let targetVector = this.level.playerCam.getTarget();
-                new Bullet(this.level, this.getWorldMatrix(), targetVector, new THREE.Vector3(-5, -0.40, 0), [this.player.modelName], undefined, 0xff0000, 0.5);
+                new Bullet(this.level, this.getWorldMatrix(), targetVector, new THREE.Vector3(-5, -0.40, 0), [this.player.modelName], undefined, 0xff0000);
                 this.fireState = 0;
             }
         }
@@ -1069,9 +1152,6 @@ class Player extends MobileModel {
     get maxHp() { return this.maxHealth; }
     get isDead() { return this.dead; }
     ;
-    afterMeshLoad() {
-        super.afterMeshLoad();
-    }
     hit() {
         if (this.health > 0) {
             this.health -= 10;
@@ -1083,6 +1163,7 @@ class Player extends MobileModel {
             this.dead = true;
             this.playAction("death", 0);
         }
+        return 0.05;
     }
     moveUpdate(delta) {
         if (!this.dead) {
@@ -1146,18 +1227,31 @@ class PracticeTarget extends Model {
     constructor(level, modelSource = new ModelSource()) {
         super(level, "practice_target", modelSource);
         this.down = false;
-        this.rY = Math.random() * (Math.PI * 2);
+        this.resetTimeout = 0;
     }
     hit() {
         if (!this.down) {
             this.mesh.rotateX(Math.PI / 2 - 0.2);
             this.down = true;
-            let max = 25 * 1000;
-            let min = 15 * 1000;
-            setTimeout(() => {
-                this.down = false;
-                this.mesh.rotateX(-(Math.PI / 2 - 0.2));
-            }, Math.random() * (max - min) + min);
+            let max = 25;
+            let min = 15;
+            this.resetTimeout = (Math.random() * (max - min) + min);
+        }
+        return 0.1;
+    }
+    reset() {
+        this.down = false;
+        this.mesh.rotateX(-(Math.PI / 2 - 0.2));
+    }
+    update(delta) {
+        if (this.resetTimeout > 0) {
+            this.resetTimeout -= delta;
+        }
+        if (this.resetTimeout < 0) {
+            this.resetTimeout = 0;
+        }
+        if (this.resetTimeout == 0 && this.down) {
+            this.reset();
         }
     }
 }
@@ -1386,7 +1480,7 @@ class TurretBase extends Model {
         this.top.posVector = topPos;
     }
     hit() {
-        this.top.hit();
+        return this.top.hit();
     }
 }
 class TurretTop extends Model {
@@ -1412,9 +1506,10 @@ class TurretTop extends Model {
             this.level.addNoCollisionName(this.name);
             this.playAction("destroy", 0);
         }
+        return 0.5;
     }
     fire() {
-        new Bullet(this.level, this.mesh.matrixWorld, this.target, new THREE.Vector3(0, 0, 7), undefined, [this.name, this.turretBase.name], 0xccff00, 0.05);
+        new Bullet(this.level, this.mesh.matrixWorld, this.target, new THREE.Vector3(0, 0, 7), undefined, [this.name, this.turretBase.name], 0xccff00);
     }
     update(delta) {
         super.update(delta);
@@ -1481,10 +1576,8 @@ class Level {
                 new Light(this, obj.model, obj);
             }
         }
-        new Skybox(this);
+        this.skybox = new Skybox(this, parseInt("0x" + utils.toHEX(this.propSkyColor)));
         this.assignToRenderer(this.game.renderer);
-        this.game.menu.visible = false;
-        this.game.hud.visible = true;
     }
     get player() {
         return this.propPlayer;
@@ -1498,6 +1591,8 @@ class Level {
     getScene() {
         return this.scene;
     }
+    get paused() { return this.isPaused; }
+    set paused(paused) { this.isPaused = paused; }
     assignToRenderer(renderer) {
         renderer.scene = this.scene;
     }
@@ -1566,6 +1661,7 @@ class Level {
                 light.update();
             }
             this.playerCamera.update();
+            this.skybox.update();
         }
     }
 }
@@ -1575,8 +1671,6 @@ class MainMenu extends Level {
         this.cam.assignToRenderer(this.game.renderer);
         this.cam.pY = 50;
         this.cam.pZ = 25;
-        this.game.hud.visible = false;
-        this.game.menu.visible = true;
     }
     update() {
     }

@@ -18,8 +18,10 @@ class Hud{
         return this.isVisible;
     }
     public set visible(visible:boolean){
-        this.isVisible = visible;
-        this.element.dataset.visible = String(this.isVisible);
+        if(visible != this.visible){
+            this.isVisible = visible;
+            this.element.dataset.visible = String(this.isVisible);
+        }
     }
 
     public get element():HTMLElement{
@@ -28,5 +30,13 @@ class Hud{
 
     public update():void{
         this.healthbar.update();
+
+        if( this.game.level.paused || this.game.level.name == "main_menu"){
+            this.visible = false;
+        }
+        else{
+            this.visible = true;
+        }
+
     }
 }

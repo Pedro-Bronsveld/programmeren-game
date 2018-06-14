@@ -22,10 +22,11 @@ class Game{
 
         // renderer
         this.propRenderer = new Renderer();
-        // hud
-        this.propHud = new Hud(this);
         // menu
         this.propMenu = new Menu(this);
+
+        // hud
+        this.propHud = new Hud(this);
 
         // level
         // this.propLevel = new Level(this, "level_1");
@@ -71,9 +72,14 @@ class Game{
     }
 
     public loadLevel(name: string):void{
-        this.propLevel = new Level(this, name);
-        // this.propLevel.assignToRenderer(this.propRenderer);
-        this.renderer.lockPointer();
+        if(name == "main_menu"){
+            this.propLevel = new MainMenu(this);
+        }
+        else{
+            this.propLevel = new Level(this, name);
+            // this.propLevel.assignToRenderer(this.propRenderer);
+            this.renderer.lockPointer();
+        }
     }
 
     gameloop = () =>{
@@ -85,9 +91,9 @@ class Game{
         
         this.renderer.update();
 
-        this.menu.update();
-
         this.hud.update();
+
+        this.menu.update();
 
         requestAnimationFrame( () => this.gameloop() );
     }
