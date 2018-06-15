@@ -4,10 +4,14 @@ class Gun extends Model{
     private hand: THREE.Bone;
     private player: Player;
     private fireState: number;
+    private enabled: boolean;
 
     constructor(level: Level, player: Player){
         super(level, "gun", undefined, false);
         this.player = player;
+
+        // gun is able to fire
+        this.enabled = false;
 
         // get bone of right hand
         this.hand = player.getMesh().getObjectByName("hand.R");
@@ -30,12 +34,12 @@ class Gun extends Model{
         this.hand.add(this.mesh);
 
         // add event listeners
-        window.addEventListener("click", () => this.mouseHandler() );
+        this.level.game.events.gunFire = this.mouseHandler;
         
     }
 
-    private mouseHandler(){
-        if(this.fireState == 0){
+    private mouseHandler = () =>{
+        if(this.fireState == 0 && this.enabled){
             this.fireState = 1;
         }
     }
@@ -56,6 +60,12 @@ class Gun extends Model{
                 this.fireState = 0;
             }
         }
+        
+    }
+
+    public updateAlways():void{
+        // disable firing when a menu is visible
+        this.enabled = !this.level.game.menu.visible;
     }
 
 }

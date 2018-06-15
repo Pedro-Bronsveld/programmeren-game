@@ -8,8 +8,10 @@ class PlayerCamera extends Camera{
     private targetIntersectsFilter: IntersectsFilter;
     private cameraIntersectsFilter: IntersectsFilter;
 
+    private prevMovementX: number;
+
     constructor(level: Level, model: Player, viewRotate:number=0){
-        super(level);
+        super(level, "PlayerCamera");
         this.targetModel = model;
 
         // y offset of the camera
@@ -21,12 +23,14 @@ class PlayerCamera extends Camera{
         this.viewRotateX = 0;
         this.viewRotateY = 0;
 
+        this.prevMovementX = 0;
+
         // setup intersects filter
         this.targetIntersectsFilter = new IntersectsFilter(this.level ,undefined, [this.targetModel.name]);
         this.cameraIntersectsFilter = new IntersectsFilter(this.level, ["turret_top"], [this.targetModel.name]);
 
-        // add mouse event listeners
-        window.addEventListener("mousemove", this.mouseHandler);
+        // add mouse event listener
+        this.level.game.events.viewRotate = this.mouseHandler;
 
         // add crosshair
         let crosshair: Model = new Model(level, "crosshair", undefined, false);
@@ -85,19 +89,25 @@ class PlayerCamera extends Camera{
 
             let sens:number = 0.0015;
 
-            this.viewRotateX += e.movementY * sens;
-            this.viewRotateY -= e.movementX * sens;
+            // difference between this movement and the previous movement
+            let movementDif:number = Math.abs(e.movementX - this.prevMovementX);
 
-            // x axis rotation limits
-            let xMax:number = Math.PI/2 - 0.0001;
-            let xMin:number = -xMax;
-            if(this.viewRotateX > xMax){
-                this.viewRotateX = xMax;
+            if(movementDif < 500){
+                this.viewRotateX += e.movementY * sens;
+                this.viewRotateY -= e.movementX * sens;
+    
+                // x axis rotation limits
+                let xMax:number = Math.PI/2 - 0.0001;
+                let xMin:number = -xMax;
+                if(this.viewRotateX > xMax){
+                    this.viewRotateX = xMax;
+                }
+                else if(this.viewRotateX < xMin){
+                    this.viewRotateX = xMin;
+                }
+                
             }
-            else if(this.viewRotateX < xMin){
-                this.viewRotateX = xMin;
-            }
-
+            this.prevMovementX = e.movementX;
         }
     }
 

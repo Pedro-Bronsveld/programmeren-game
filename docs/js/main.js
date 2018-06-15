@@ -12,7 +12,7 @@ class Game {
         this.levelsData = levelsData;
         this.meshesData = meshesData;
         this.propElement = document.getElementsByTagName("game")[0];
-        this.eventManager = new EventManager();
+        this.eventHandler = new EventHandler();
         this.propRenderer = new Renderer();
         this.propMenu = new Menu(this);
         this.propHud = new Hud(this);
@@ -32,7 +32,7 @@ class Game {
     ;
     get menu() { return this.propMenu; }
     ;
-    get events() { return this.eventManager; }
+    get events() { return this.eventHandler; }
     ;
     getRenderer() { return this.propRenderer; }
     levelDataByName(name) {
@@ -167,7 +167,7 @@ class GameObject {
 }
 class Camera extends GameObject {
     constructor(level, name = "Camera", position = new THREE.Vector3(), rotation = new THREE.Vector3()) {
-        super(level, name, "Camera");
+        super(level, name, name);
         this.setSize = () => {
             this.camera.aspect = window.innerWidth / window.innerHeight;
             this.camera.updateProjectionMatrix();
@@ -177,7 +177,12 @@ class Camera extends GameObject {
         this.camera.rotation.y = rotation.y;
         this.camera.rotation.z = rotation.z;
         this.camera.position.set(position.x, position.y, position.z);
-        window.addEventListener("resize", this.setSize);
+        if (name == "Camera") {
+            this.level.game.events.cameraResize = this.setSize;
+        }
+        else if (name = "PlayerCamera") {
+            this.level.game.events.playerCameraReize = this.setSize;
+        }
     }
     getRotation() {
         return this.camera.rotation;
@@ -226,20 +231,24 @@ class Camera extends GameObject {
 }
 class PlayerCamera extends Camera {
     constructor(level, model, viewRotate = 0) {
-        super(level);
+        super(level, "PlayerCamera");
         this.mouseHandler = (e) => {
             if (this.level.game.renderer.pointerIsLocked) {
                 let sens = 0.0015;
-                this.viewRotateX += e.movementY * sens;
-                this.viewRotateY -= e.movementX * sens;
-                let xMax = Math.PI / 2 - 0.0001;
-                let xMin = -xMax;
-                if (this.viewRotateX > xMax) {
-                    this.viewRotateX = xMax;
+                let movementDif = Math.abs(e.movementX - this.prevMovementX);
+                if (movementDif < 500) {
+                    this.viewRotateX += e.movementY * sens;
+                    this.viewRotateY -= e.movementX * sens;
+                    let xMax = Math.PI / 2 - 0.0001;
+                    let xMin = -xMax;
+                    if (this.viewRotateX > xMax) {
+                        this.viewRotateX = xMax;
+                    }
+                    else if (this.viewRotateX < xMin) {
+                        this.viewRotateX = xMin;
+                    }
                 }
-                else if (this.viewRotateX < xMin) {
-                    this.viewRotateX = xMin;
-                }
+                this.prevMovementX = e.movementX;
             }
         };
         this.targetModel = model;
@@ -248,9 +257,10 @@ class PlayerCamera extends Camera {
         this.distance = this.defaultDistance;
         this.viewRotateX = 0;
         this.viewRotateY = 0;
+        this.prevMovementX = 0;
         this.targetIntersectsFilter = new IntersectsFilter(this.level, undefined, [this.targetModel.name]);
         this.cameraIntersectsFilter = new IntersectsFilter(this.level, ["turret_top"], [this.targetModel.name]);
-        window.addEventListener("mousemove", this.mouseHandler);
+        this.level.game.events.viewRotate = this.mouseHandler;
         let crosshair = new Model(level, "crosshair", undefined, false);
         var crosshairMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.75 });
         crosshair.material = crosshairMaterial;
@@ -329,24 +339,24 @@ class PlayerCamera extends Camera {
         this.camera.lookAt(cameraTarget);
     }
 }
-class EventManager {
+class EventHandler {
     constructor() {
-        this.clear = () => {
-            for (let event of this.events) {
-                if (!event.permanent) {
-                    event.object.removeEventListener(event.event, event.func);
-                }
-            }
-        };
-        this.events = new Array();
-    }
-    add(object, event, func, permanent = true) {
-        this.events.push({
-            object: object,
-            event: event,
-            func: func,
-            permanent: permanent
+        this.viewRotate = new Function();
+        this.moveStart = new Function();
+        this.moveStop = new Function();
+        this.cameraResize = new Function();
+        this.playerCameraReize = new Function();
+        this.menuKeys = new Function;
+        this.gunFire = new Function;
+        window.addEventListener("mousemove", (e) => this.viewRotate(e));
+        window.addEventListener("keydown", (e) => this.moveStart(e));
+        window.addEventListener("keyup", (e) => this.moveStop(e));
+        window.addEventListener("resize", (e) => {
+            this.cameraResize(e);
+            this.playerCameraReize(e);
         });
+        window.addEventListener("keypress", (e) => this.menuKeys(e));
+        window.addEventListener("click", (e) => this.gunFire(e));
     }
 }
 class LightSource {
@@ -555,24 +565,37 @@ class Model extends GameObject {
     getWorldMatrix() {
         return this.mesh.matrixWorld;
     }
-    playAction(name, repetitions = Infinity) {
+    stopAction(name) {
+        for (let key in this.actions) {
+            if (key == name) {
+                this.actions[key].stop();
+            }
+        }
+    }
+    playAction(name, repetitions = Infinity, fade = true) {
         if (name != this.playingAction) {
             for (let key in this.actions) {
                 if (key == name) {
-                    let from;
-                    if (typeof this.actions[this.playingAction] !== "undefined") {
-                        from = this.actions[this.playingAction].play();
+                    if (fade) {
+                        let from;
+                        if (typeof this.actions[this.playingAction] !== "undefined") {
+                            from = this.actions[this.playingAction].play();
+                        }
+                        else {
+                            from = this.actions[key];
+                        }
+                        let to = this.actions[key].play();
+                        to.reset();
+                        to.repetitions = repetitions;
+                        if (to.repetitions != Infinity) {
+                            to.clampWhenFinished = true;
+                        }
+                        from.crossFadeTo(to, 0.2, true);
                     }
                     else {
-                        from = this.actions[key];
+                        this.stopAction(this.playingAction);
+                        this.actions[key].play();
                     }
-                    let to = this.actions[key].play();
-                    to.reset();
-                    to.repetitions = repetitions;
-                    if (to.repetitions != Infinity) {
-                        to.clampWhenFinished = true;
-                    }
-                    from.crossFadeTo(to, 0.2, true);
                     this.playingAction = name;
                 }
             }
@@ -588,6 +611,7 @@ class Model extends GameObject {
     update(delta) {
         this.mixer.update(delta);
     }
+    updateAlways() { }
 }
 class Skybox extends Model {
     constructor(level, color = 0x0077ff) {
@@ -664,6 +688,17 @@ class Hud {
 }
 class Menu {
     constructor(game) {
+        this.keyHandler = (e) => {
+            if (e.keyCode == 13) {
+                this.visible = !this.visible;
+                if (this.visible) {
+                    this.game.renderer.unlockPointer();
+                }
+                else {
+                    this.game.renderer.lockPointer();
+                }
+            }
+        };
         this.game = game;
         this.isVisible = false;
         this.state = "pause";
@@ -673,35 +708,19 @@ class Menu {
         this.element.appendChild(this.buttonsContainer);
         this.headerElement = document.createElement("headertext");
         this.buttonsContainer.appendChild(this.headerElement);
-        this.headerText = "Main Menu";
         this.buttons = new Array();
         this.addButton(new MenuButton("start", () => this.start(), ["main"], true));
         this.addButton(new MenuButton("continue", () => this.continue(), ["pause"], true));
         this.addButton(new MenuButton("reload level", () => this.reload(), ["pause", "dead"], true));
         this.addButton(new MenuButton("quit", () => this.quit(), ["pause", "dead"], true));
-        document.addEventListener("keydown", (e) => this.keyHandler(e));
+        this.game.events.menuKeys = this.keyHandler;
         this.setState("main");
     }
     addButton(button) {
         this.buttons.push(button);
         this.buttonsContainer.appendChild(button.element);
     }
-    keyHandler(e) {
-        if (e.keyCode == 13) {
-            this.visible = !this.visible;
-            if (this.visible) {
-                this.game.renderer.unlockPointer();
-            }
-            else {
-                this.game.renderer.lockPointer();
-            }
-        }
-    }
-    get header() {
-        return this.headerText;
-    }
     set header(text) {
-        this.headerText = text;
         this.headerElement.innerHTML = text;
     }
     setState(state) {
@@ -947,7 +966,13 @@ class Bullet extends MobileModel {
 class Gun extends Model {
     constructor(level, player) {
         super(level, "gun", undefined, false);
+        this.mouseHandler = () => {
+            if (this.fireState == 0 && this.enabled) {
+                this.fireState = 1;
+            }
+        };
         this.player = player;
+        this.enabled = false;
         this.hand = player.getMesh().getObjectByName("hand.R");
         this.fireState = 0;
         this.rX = Math.PI;
@@ -956,12 +981,7 @@ class Gun extends Model {
         this.pY = -0.13;
         this.pZ = -0.36;
         this.hand.add(this.mesh);
-        window.addEventListener("click", () => this.mouseHandler());
-    }
-    mouseHandler() {
-        if (this.fireState == 0) {
-            this.fireState = 1;
-        }
+        this.level.game.events.gunFire = this.mouseHandler;
     }
     update() {
         if (!this.player.isDead) {
@@ -975,6 +995,9 @@ class Gun extends Model {
                 this.fireState = 0;
             }
         }
+    }
+    updateAlways() {
+        this.enabled = !this.level.game.menu.visible;
     }
 }
 class Light extends GameObject {
@@ -1073,7 +1096,7 @@ class Moving {
     }
 }
 class Player extends MobileModel {
-    constructor(level) {
+    constructor(level, rotateY = 0) {
         super(level, "player");
         this.keyDownHandler = (e) => {
             e.stopPropagation();
@@ -1167,13 +1190,14 @@ class Player extends MobileModel {
         this.downKey = 83;
         this.rightKey = 68;
         this.jumpKey = 32;
-        document.addEventListener("keydown", this.keyDownHandler);
-        document.addEventListener("keyup", this.keyUpHandler);
+        this.level.game.events.moveStart = this.keyDownHandler;
+        this.level.game.events.moveStop = this.keyUpHandler;
         new Gun(this.level, this);
         if (this.hasCollision) {
             this.collisionBox = new CollisionBox(this, 2, 7.5, 2, 0, 7.5 / 2, 0, 5, true, false, new THREE.Vector3(1, 2, 1), true, [this.modelName, "turret_top"]);
         }
-        this.playAction("idle");
+        this.rY = rotateY;
+        this.playAction("idle", undefined, false);
         this.actionTimeScale("walk", 1.7);
     }
     get hp() { return this.health; }
@@ -1584,7 +1608,7 @@ class Level {
         this.models = new Array();
         this.lights = new Array();
         let levelSrcData = this.game.levelDataByName(levelName);
-        this.propPlayer = new Player(this);
+        this.propPlayer = new Player(this, levelSrcData.view_rotate);
         this.playerCamera = new PlayerCamera(this, this.player, levelSrcData.view_rotate);
         this.playerCamera.assignToRenderer(this.propGame.renderer);
         this.scene.add(this.playerCamera.camera);
@@ -1691,12 +1715,18 @@ class Level {
         if (!this.isPaused) {
             for (let model of this.models) {
                 model.update(delta);
+                model.updateAlways();
             }
             for (let light of this.lights) {
                 light.update();
             }
             this.playerCamera.update();
             this.skybox.update();
+        }
+        else {
+            for (let model of this.models) {
+                model.updateAlways();
+            }
         }
     }
 }

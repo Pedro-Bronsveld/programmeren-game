@@ -6,7 +6,6 @@ class Menu{
     private isVisible: boolean;
     private state: string;
     private headerElement: HTMLElement;
-    private headerText: string;
 
     constructor(game: Game){
         this.game = game;
@@ -27,7 +26,6 @@ class Menu{
         //create title
         this.headerElement = document.createElement("headertext");
         this.buttonsContainer.appendChild(this.headerElement);
-        this.headerText = "Main Menu";
 
         // create the buttons in the menu
         this.buttons = new Array<MenuButton>();
@@ -41,7 +39,7 @@ class Menu{
         // create quit button
         this.addButton( new MenuButton("quit", () => this.quit(), ["pause", "dead"], true ) );
 
-        document.addEventListener("keydown", (e:KeyboardEvent) => this.keyHandler(e) );
+        this.game.events.menuKeys = this.keyHandler;
 
         // set state of menu
         this.setState("main");
@@ -52,7 +50,7 @@ class Menu{
         this.buttonsContainer.appendChild(button.element);
     }
 
-    private keyHandler(e: KeyboardEvent):void{
+    private keyHandler = (e: KeyboardEvent):void => {
         // open the menu when enter is pressed
         if(e.keyCode == 13){
             this.visible = !this.visible;
@@ -66,11 +64,7 @@ class Menu{
         }
     }
 
-    private get header():string{
-        return this.headerText;
-    }
     private set header(text:string){
-        this.headerText = text;
         this.headerElement.innerHTML = text;
     }
 

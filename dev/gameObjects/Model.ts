@@ -122,7 +122,6 @@ class Model extends GameObject{
     }
 
     // stop any action of the model that is playing
-    /*
     private stopAction(name: string):void{
         for(let key in this.actions){
             if(key == name){
@@ -130,32 +129,36 @@ class Model extends GameObject{
             }
         }
     }
-    */
 
     // play an action
-    protected playAction(name: string, repetitions:number=Infinity):void{
+    protected playAction(name: string, repetitions:number=Infinity, fade:boolean=true):void{
         if(name != this.playingAction){
             for(let key in this.actions){
                 if(key == name){
-                    let from: THREE.AnimationAction;
-                    
-                    if(typeof this.actions[this.playingAction] !== "undefined"){
-                        from = this.actions[this.playingAction].play();
+                    if(fade){
+                        let from: THREE.AnimationAction;
+                        
+                        if(typeof this.actions[this.playingAction] !== "undefined"){
+                            from = this.actions[this.playingAction].play();
+                        }
+                        else{
+                            from = this.actions[key];
+                        }
+                        
+                        let to: THREE.AnimationAction = this.actions[key].play();
+                        to.reset();
+    
+                        to.repetitions = repetitions;
+                        if(to.repetitions != Infinity){
+                            to.clampWhenFinished = true;
+                        }
+    
+                        from.crossFadeTo(to, 0.2, true);                        
                     }
                     else{
-                        from = this.actions[key];
+                        this.stopAction(this.playingAction);
+                        this.actions[key].play();
                     }
-                    
-                    let to: THREE.AnimationAction = this.actions[key].play();
-                    to.reset();
-
-                    to.repetitions = repetitions;
-                    if(to.repetitions != Infinity){
-                        to.clampWhenFinished = true;
-                    }
-
-                    from.crossFadeTo(to, 0.2, true);
-                    // this.stopAction(this.playingAction);
                     this.playingAction = name;
                 }
             }
@@ -176,4 +179,7 @@ class Model extends GameObject{
         // update animation
         this.mixer.update(delta);
     }
+
+    // update even when game is paused
+    public updateAlways():void{}
 }

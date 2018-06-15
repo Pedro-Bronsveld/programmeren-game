@@ -36,7 +36,7 @@ class Level{
         let levelSrcData: LevelSrcData = this.game.levelDataByName(levelName);
         
         // create player and player camera
-        this.propPlayer = new Player(this);
+        this.propPlayer = new Player(this, levelSrcData.view_rotate);
         this.playerCamera = new PlayerCamera(this, this.player, levelSrcData.view_rotate);
         this.playerCamera.assignToRenderer(this.propGame.renderer);
         this.scene.add(this.playerCamera.camera);
@@ -181,6 +181,7 @@ class Level{
             // update models
             for(let model of this.models){
                 model.update(delta);
+                model.updateAlways();
             }
     
             // update lights
@@ -191,6 +192,11 @@ class Level{
             this.playerCamera.update();
 
             this.skybox.update();
+        }
+        else{
+            for(let model of this.models){
+                model.updateAlways();
+            }
         }
         
     }

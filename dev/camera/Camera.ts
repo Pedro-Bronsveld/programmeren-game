@@ -4,7 +4,7 @@ class Camera extends GameObject{
     public camera: THREE.PerspectiveCamera;
     // protected orbit: THREE.OrbitControls;
     constructor(level: Level, name:string="Camera", position:THREE.Vector3=new THREE.Vector3(), rotation:THREE.Vector3=new THREE.Vector3()){
-        super(level, name, "Camera");
+        super(level, name, name);
         // create camera
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.09, 2000);
         // this.orbit = new THREE.OrbitControls(this.camera);
@@ -16,7 +16,12 @@ class Camera extends GameObject{
         // set position and rotation
         this.camera.position.set(position.x, position.y, position.z);
 
-        window.addEventListener("resize", this.setSize);
+        if(name == "Camera"){
+            this.level.game.events.cameraResize = this.setSize;
+        }
+        else if(name = "PlayerCamera"){
+            this.level.game.events.playerCameraReize = this.setSize;
+        }
 
     }
 
@@ -33,7 +38,7 @@ class Camera extends GameObject{
         renderer.camera = this.camera;
     }
 
-    public update(){
+    public update():void{
         // this.orbit.update();
         // console.log(this.camera.position);
     }

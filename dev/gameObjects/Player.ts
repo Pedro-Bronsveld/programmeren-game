@@ -26,7 +26,7 @@ class Player extends MobileModel{
     private dead: boolean;
     private timeSinceDeath: number;
 
-    constructor(level: Level){
+    constructor(level: Level, rotateY:number=0){
         super(level, "player");
         this.cameraRotation = 0;
         this.hasCollision = true;
@@ -64,9 +64,8 @@ class Player extends MobileModel{
         this.jumpKey = 32;
 
         // add event listeners
-        document.addEventListener("keydown", this.keyDownHandler);
-        document.addEventListener("keyup", this.keyUpHandler);
-        // window.addEventListener("mousemove", this.mouseHandler);
+        this.level.game.events.moveStart = this.keyDownHandler;
+        this.level.game.events.moveStop = this.keyUpHandler;
 
         // create gun
         new Gun(this.level, this);
@@ -76,9 +75,12 @@ class Player extends MobileModel{
             this.collisionBox = new CollisionBox(this, 2, 7.5, 2, 0, 7.5/2, 0, 5, true, false, new THREE.Vector3(1,2,1), true, [this.modelName, "turret_top"] );
         }
 
+        // rotate player when loaded
+        this.rY = rotateY;
+
         // set animation
         // this.actions.idle.play();
-        this.playAction("idle");
+        this.playAction("idle", undefined, false);
 
         // set walk action speed
         this.actionTimeScale("walk", 1.7);

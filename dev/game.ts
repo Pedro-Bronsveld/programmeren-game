@@ -8,7 +8,7 @@ class Game{
     private propHud: Hud;
     private propElement: HTMLElement;
     private propMenu: Menu;
-    private eventManager: EventManager;
+    private eventHandler: EventHandler;
 
     private levelsData: Array<LevelSrcData>;
     private meshesData: Array<MeshData>;
@@ -18,7 +18,7 @@ class Game{
         this.meshesData = meshesData;
         this.propElement = <HTMLElement>document.getElementsByTagName("game")[0];
 
-        this.eventManager = new EventManager();
+        this.eventHandler = new EventHandler();
 
         // renderer
         this.propRenderer = new Renderer();
@@ -47,7 +47,7 @@ class Game{
     public get element():HTMLElement{ return this.propElement };
     public get hud():Hud{ return this.propHud };
     public get menu():Menu{ return this.propMenu };
-    public get events():EventManager{ return this.eventManager };
+    public get events():EventHandler{ return this.eventHandler };
 
     public getRenderer():Renderer{return this.propRenderer;}
 
