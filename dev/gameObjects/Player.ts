@@ -26,6 +26,8 @@ class Player extends MobileModel{
     private dead: boolean;
     private timeSinceDeath: number;
 
+    private gun: Gun;
+
     constructor(level: Level, rotateY:number=0){
         super(level, "player");
         this.cameraRotation = 0;
@@ -68,7 +70,7 @@ class Player extends MobileModel{
         this.level.game.events.moveStop = this.keyUpHandler;
 
         // create gun
-        new Gun(this.level, this);
+        this.gun = new Gun(this.level, this);
 
         if(this.hasCollision){
             // create collision box
@@ -194,6 +196,11 @@ class Player extends MobileModel{
     protected moveUpdate(delta: number){
 
         if(!this.dead){
+            
+            if(this.gun.isFiring){
+                // rotate player to view if fire button is being held
+                this.rotateToView();
+            }
             
             if(this.moving.forward != 0 || this.moving.sideways != 0){
                 // player is moving

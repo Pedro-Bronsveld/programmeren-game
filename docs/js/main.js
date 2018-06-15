@@ -347,7 +347,8 @@ class EventHandler {
         this.cameraResize = new Function();
         this.playerCameraReize = new Function();
         this.menuKeys = new Function;
-        this.gunFire = new Function;
+        this.gunFireStart = new Function;
+        this.gunFireStop = new Function;
         window.addEventListener("mousemove", (e) => this.viewRotate(e));
         window.addEventListener("keydown", (e) => this.moveStart(e));
         window.addEventListener("keyup", (e) => this.moveStop(e));
@@ -356,7 +357,8 @@ class EventHandler {
             this.playerCameraReize(e);
         });
         window.addEventListener("keypress", (e) => this.menuKeys(e));
-        window.addEventListener("click", (e) => this.gunFire(e));
+        window.addEventListener("mousedown", (e) => this.gunFireStart(e));
+        window.addEventListener("mouseup", (e) => this.gunFireStop(e));
     }
 }
 class LightSource {
@@ -966,13 +968,16 @@ class Bullet extends MobileModel {
 class Gun extends Model {
     constructor(level, player) {
         super(level, "gun", undefined, false);
-        this.mouseHandler = () => {
-            if (this.fireState == 0 && this.enabled) {
-                this.fireState = 1;
-            }
+        this.fireStart = () => {
+            this.firing = true;
+        };
+        this.fireStop = () => {
+            this.firing = false;
         };
         this.player = player;
         this.enabled = false;
+        this.firing = false;
+        this.cooldown = 0;
         this.hand = player.getMesh().getObjectByName("hand.R");
         this.fireState = 0;
         this.rX = Math.PI;
@@ -981,10 +986,23 @@ class Gun extends Model {
         this.pY = -0.13;
         this.pZ = -0.36;
         this.hand.add(this.mesh);
-        this.level.game.events.gunFire = this.mouseHandler;
+        this.level.game.events.gunFireStart = this.fireStart;
+        this.level.game.events.gunFireStop = this.fireStop;
     }
-    update() {
+    get isFiring() {
+        return this.firing;
+    }
+    update(delta) {
         if (!this.player.isDead) {
+            if (this.cooldown > 0) {
+                this.cooldown -= delta;
+            }
+            else if (this.cooldown < 0) {
+                this.cooldown = 0;
+            }
+            if (this.fireState == 0 && this.enabled && this.firing && this.cooldown == 0) {
+                this.fireState = 1;
+            }
             if (this.fireState == 1) {
                 this.player.rotateToView();
                 this.fireState = 2;
@@ -992,6 +1010,7 @@ class Gun extends Model {
             else if (this.fireState == 2) {
                 let targetVector = this.level.playerCam.getTarget();
                 new Bullet(this.level, this.getWorldMatrix(), targetVector, new THREE.Vector3(-5, -0.40, 0), [this.player.modelName], undefined, 0xff0000);
+                this.cooldown = 0.25;
                 this.fireState = 0;
             }
         }
@@ -1192,7 +1211,7 @@ class Player extends MobileModel {
         this.jumpKey = 32;
         this.level.game.events.moveStart = this.keyDownHandler;
         this.level.game.events.moveStop = this.keyUpHandler;
-        new Gun(this.level, this);
+        this.gun = new Gun(this.level, this);
         if (this.hasCollision) {
             this.collisionBox = new CollisionBox(this, 2, 7.5, 2, 0, 7.5 / 2, 0, 5, true, false, new THREE.Vector3(1, 2, 1), true, [this.modelName, "turret_top"]);
         }
@@ -1219,6 +1238,9 @@ class Player extends MobileModel {
     }
     moveUpdate(delta) {
         if (!this.dead) {
+            if (this.gun.isFiring) {
+                this.rotateToView();
+            }
             if (this.moving.forward != 0 || this.moving.sideways != 0) {
                 this.rotateToView();
                 if (this.yVelocity > 0.1 && this.bottomDistance > 0.1) {

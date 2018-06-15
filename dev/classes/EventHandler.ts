@@ -6,7 +6,8 @@ class EventHandler{
     public cameraResize: Function;
     public playerCameraReize: Function;
     public menuKeys: Function;
-    public gunFire: Function;
+    public gunFireStart: Function;
+    public gunFireStop: Function;
 
     constructor(){
         this.viewRotate = new Function();
@@ -15,7 +16,8 @@ class EventHandler{
         this.cameraResize = new Function();
         this.playerCameraReize = new Function();
         this.menuKeys = new Function;
-        this.gunFire = new Function;
+        this.gunFireStart = new Function;
+        this.gunFireStop = new Function;
 
         window.addEventListener("mousemove", (e: MouseEvent) => this.viewRotate(e) );
         window.addEventListener("keydown", (e: KeyboardEvent) => this.moveStart(e) );
@@ -25,7 +27,8 @@ class EventHandler{
             this.playerCameraReize(e);
         } );
         window.addEventListener("keypress", (e: KeyboardEvent) => this.menuKeys(e) );
-        window.addEventListener("click", (e:MouseEvent) => this.gunFire(e) );
+        window.addEventListener("mousedown", (e:MouseEvent) => this.gunFireStart(e) );
+        window.addEventListener("mouseup", (e:MouseEvent) => this.gunFireStop(e) );
     }
     
 }

@@ -5,6 +5,8 @@ class Gun extends Model{
     private player: Player;
     private fireState: number;
     private enabled: boolean;
+    private firing: boolean;
+    private cooldown: number;
 
     constructor(level: Level, player: Player){
         super(level, "gun", undefined, false);
@@ -12,6 +14,10 @@ class Gun extends Model{
 
         // gun is able to fire
         this.enabled = false;
+        // gun is currently firing
+        this.firing = false;
+        // time in seconds before gun can fire again
+        this.cooldown = 0;
 
         // get bone of right hand
         this.hand = player.getMesh().getObjectByName("hand.R");
@@ -34,18 +40,38 @@ class Gun extends Model{
         this.hand.add(this.mesh);
 
         // add event listeners
-        this.level.game.events.gunFire = this.mouseHandler;
+        this.level.game.events.gunFireStart = this.fireStart;
+        this.level.game.events.gunFireStop = this.fireStop;
         
     }
 
-    private mouseHandler = () =>{
-        if(this.fireState == 0 && this.enabled){
-            this.fireState = 1;
-        }
+    public get isFiring():boolean{
+        return this.firing;
     }
 
-    public update():void{
+    private fireStart = () => {
+        this.firing = true;
+    }
+
+    private fireStop = () => {
+        this.firing = false;
+    }
+
+    public update(delta: number):void{
         if(!this.player.isDead){
+
+            // reduce cooldown
+            if(this.cooldown > 0){
+                this.cooldown -= delta;
+            }
+            else if(this.cooldown < 0){
+                this.cooldown = 0;
+            }
+
+            // check if bullet can and should be fired
+            if(this.fireState == 0 && this.enabled && this.firing && this.cooldown == 0){
+                this.fireState = 1;
+            }
 
             // firing a bullet
             if(this.fireState == 1){
@@ -57,6 +83,10 @@ class Gun extends Model{
                 // create bullet
                 let targetVector: THREE.Vector3 = this.level.playerCam.getTarget();
                 new Bullet(this.level, this.getWorldMatrix(), targetVector, new THREE.Vector3(-5, -0.40, 0), [this.player.modelName], undefined, 0xff0000);
+
+                // set cooldown in seconds
+                this.cooldown = 0.25;
+
                 this.fireState = 0;
             }
         }
