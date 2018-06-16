@@ -7,6 +7,7 @@ class PlayerCamera extends Camera{
     private defaultDistance: number;
     private targetIntersectsFilter: IntersectsFilter;
     private cameraIntersectsFilter: IntersectsFilter;
+    private crosshair: Model;
 
     private prevMovementX: number;
 
@@ -33,16 +34,16 @@ class PlayerCamera extends Camera{
         this.level.game.events.viewRotate = this.mouseHandler;
 
         // add crosshair
-        let crosshair: Model = new Model(level, "crosshair", undefined, false);
+        this.crosshair = new Model(level, "crosshair", undefined, false);
         var crosshairMaterial = new THREE.MeshBasicMaterial({color: 0xffffff, transparent: true, opacity: 0.75});
-        crosshair.material = crosshairMaterial;
+        this.crosshair.material = crosshairMaterial;
 
-        crosshair.pZ = -0.1;
-        crosshair.sY = 0.002;
-        crosshair.sX = 0.002;
+        this.crosshair.pZ = -0.1;
+        this.crosshair.sY = 0.002;
+        this.crosshair.sX = 0.002;
 
         // add crosshair to camera
-        this.camera.add(crosshair.getMesh());
+        this.camera.add(this.crosshair.getMesh());
 
         // change what way player is facing
         this.viewRotateY = viewRotate;
@@ -195,5 +196,11 @@ class PlayerCamera extends Camera{
 
         this.camera.lookAt(cameraTarget);
 
+    }
+
+    public updateAlways():void{
+        if(this.crosshair.visible != this.level.game.hud.visible){
+            this.crosshair.visible = this.level.game.hud.visible;
+        }
     }
 }

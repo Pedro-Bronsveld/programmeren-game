@@ -261,13 +261,13 @@ class PlayerCamera extends Camera {
         this.targetIntersectsFilter = new IntersectsFilter(this.level, undefined, [this.targetModel.name]);
         this.cameraIntersectsFilter = new IntersectsFilter(this.level, ["turret_top"], [this.targetModel.name]);
         this.level.game.events.viewRotate = this.mouseHandler;
-        let crosshair = new Model(level, "crosshair", undefined, false);
+        this.crosshair = new Model(level, "crosshair", undefined, false);
         var crosshairMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.75 });
-        crosshair.material = crosshairMaterial;
-        crosshair.pZ = -0.1;
-        crosshair.sY = 0.002;
-        crosshair.sX = 0.002;
-        this.camera.add(crosshair.getMesh());
+        this.crosshair.material = crosshairMaterial;
+        this.crosshair.pZ = -0.1;
+        this.crosshair.sY = 0.002;
+        this.crosshair.sX = 0.002;
+        this.camera.add(this.crosshair.getMesh());
         this.viewRotateY = viewRotate;
     }
     getTarget() {
@@ -337,6 +337,11 @@ class PlayerCamera extends Camera {
         cameraOffset.z += modelPos.z;
         this.camera.position.set(cameraOffset.x, cameraOffset.y, cameraOffset.z);
         this.camera.lookAt(cameraTarget);
+    }
+    updateAlways() {
+        if (this.crosshair.visible != this.level.game.hud.visible) {
+            this.crosshair.visible = this.level.game.hud.visible;
+        }
     }
 }
 class EventHandler {
@@ -564,6 +569,10 @@ class Model extends GameObject {
         this.sY = vector3.y;
         this.sZ = vector3.z;
     }
+    get visible() { return this.mesh.visible; }
+    ;
+    set visible(visible) { this.mesh.visible = visible; }
+    ;
     getWorldMatrix() {
         return this.mesh.matrixWorld;
     }
@@ -1737,7 +1746,6 @@ class Level {
         if (!this.isPaused) {
             for (let model of this.models) {
                 model.update(delta);
-                model.updateAlways();
             }
             for (let light of this.lights) {
                 light.update();
@@ -1745,11 +1753,10 @@ class Level {
             this.playerCamera.update();
             this.skybox.update();
         }
-        else {
-            for (let model of this.models) {
-                model.updateAlways();
-            }
+        for (let model of this.models) {
+            model.updateAlways();
         }
+        this.playerCamera.updateAlways();
     }
 }
 class MainMenu extends Level {

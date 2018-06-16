@@ -116,6 +116,10 @@ class Model extends GameObject{
         this.sZ = vector3.z;
     }
 
+    // visible
+    public get visible():boolean{ return this.mesh.visible };
+    public set visible(visible:boolean){ this.mesh.visible = visible };
+
     // get world matrix from mesh
     public getWorldMatrix():THREE.Matrix4{
         return this.mesh.matrixWorld;

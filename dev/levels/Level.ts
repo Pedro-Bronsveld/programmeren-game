@@ -181,7 +181,6 @@ class Level{
             // update models
             for(let model of this.models){
                 model.update(delta);
-                model.updateAlways();
             }
     
             // update lights
@@ -193,11 +192,13 @@ class Level{
 
             this.skybox.update();
         }
-        else{
-            for(let model of this.models){
-                model.updateAlways();
-            }
+
+        // updates even when the level is paused
+        for(let model of this.models){
+            
+            model.updateAlways();
         }
+        this.playerCamera.updateAlways();
         
     }
 }
