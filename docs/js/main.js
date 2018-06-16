@@ -480,6 +480,7 @@ class Model extends GameObject {
         let meshData = level.game.meshDataByName(meshName);
         this.mesh = meshData.mesh;
         let geometry = meshData.geometry;
+        this.tween = new Tween;
         this.mesh.userData.uniqueName = this.name;
         this.mixer = new THREE.AnimationMixer(this.mesh);
         this.actions = {};
@@ -506,7 +507,8 @@ class Model extends GameObject {
         this.rotVector = new THREE.Vector3(this.modelSource.rotation.x, this.modelSource.rotation.y, this.modelSource.rotation.z);
         this.scaleVector = new THREE.Vector3(this.modelSource.scale.x, this.modelSource.scale.y, this.modelSource.scale.z);
     }
-    hit() {
+    hit(damage) {
+        damage = damage;
         return 1;
     }
     getMesh() {
@@ -636,6 +638,46 @@ class Skybox extends Model {
         this.posVector = this.level.player.posVector;
     }
 }
+class Tween {
+    radians(from, to, step) {
+        step = Math.abs(step);
+        function mod(n, m) {
+            return ((n % m) + m) % m;
+        }
+        from = mod(from, Math.PI * 2);
+        to = mod(to, Math.PI * 2);
+        let difference = Math.abs(to - from);
+        if (difference > Math.PI) {
+            difference = (2 * Math.PI) - difference;
+        }
+        let dir = 1;
+        if (to > from && to - from > Math.PI || from > to && from - to < Math.PI) {
+            dir = -1;
+        }
+        let newRad;
+        if (difference < step) {
+            newRad = to;
+        }
+        else {
+            newRad = from + step * dir;
+        }
+        return mod(newRad, Math.PI * 2);
+    }
+    number(from, to, step) {
+        step = Math.abs(step);
+        let dir = 1;
+        if (to < from) {
+            dir = -1;
+        }
+        let difference = Math.abs(to - from);
+        if (difference < step) {
+            return to;
+        }
+        else {
+            return from + (step * dir);
+        }
+    }
+}
 class Utils {
     toHEX(rgb) {
         let rgbArray = [rgb.r, rgb.g, rgb.b];
@@ -759,7 +801,7 @@ class Menu {
         }
     }
     start() {
-        this.game.loadLevel("level_1");
+        this.game.loadLevel("beta_level");
     }
     continue() {
         this.visible = false;
@@ -834,7 +876,7 @@ class MobileModel extends Model {
     get collisionEnabled() {
         return this.hasCollision;
     }
-    moveUpdate(delta) {
+    moveUpdate(delta, movingRotation = this.rotVector) {
         let moveZ = Math.abs(this.moving.forward);
         let moveX = Math.abs(this.moving.sideways);
         let moveTotal = moveZ + moveX;
@@ -860,7 +902,7 @@ class MobileModel extends Model {
             let right = this.collisionBox.right().distance;
             let left = this.collisionBox.left().distance;
             let transform = new THREE.Vector3(velocityX, 0, velocityZ);
-            transform.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.rY);
+            transform.applyAxisAngle(new THREE.Vector3(0, 1, 0), movingRotation.y);
             if (this.hasCollision) {
                 if (transform.z > 0) {
                     if (front < transform.z) {
@@ -924,8 +966,9 @@ class MobileModel extends Model {
     }
 }
 class Bullet extends MobileModel {
-    constructor(level, worldMatrix, target, barelOffset, ignoreModels = new Array(), ignoreNames = new Array(), color = 0xff0000) {
+    constructor(level, worldMatrix, target, barelOffset, ignoreModels = new Array(), ignoreNames = new Array(), color = 0xff0000, damage = 10) {
         super(level, "bullet");
+        this.damage = damage;
         this.hasCollision = true;
         this.collisionBox = new CollisionBox(this, 1, 0.9, 6, 0, 0, -1.5, 5, false, true, new THREE.Vector3(1, 1, 1), true, ignoreModels, ignoreNames);
         var bulletMaterial = new THREE.MeshBasicMaterial({ color: color });
@@ -965,7 +1008,7 @@ class Bullet extends MobileModel {
     colided(rayData) {
         this.moving.forward = 0;
         let model = this.level.getModelByName(rayData.model.userData.uniqueName);
-        this.despawnTimeout = model.hit();
+        this.despawnTimeout = model.hit(this.damage);
     }
     remove() {
         this.level.removeModel(this);
@@ -977,11 +1020,15 @@ class Bullet extends MobileModel {
 class Gun extends Model {
     constructor(level, player) {
         super(level, "gun", undefined, false);
-        this.fireStart = () => {
-            this.firing = true;
+        this.fireStart = (e) => {
+            if (e.button == 0) {
+                this.firing = true;
+            }
         };
-        this.fireStop = () => {
-            this.firing = false;
+        this.fireStop = (e) => {
+            if (e.button == 0) {
+                this.firing = false;
+            }
         };
         this.player = player;
         this.enabled = false;
@@ -1013,7 +1060,6 @@ class Gun extends Model {
                 this.fireState = 1;
             }
             if (this.fireState == 1) {
-                this.player.rotateToView();
                 this.fireState = 2;
             }
             else if (this.fireState == 2) {
@@ -1200,6 +1246,7 @@ class Player extends MobileModel {
         this.cameraRotation = 0;
         this.hasCollision = true;
         this.hasGravity = true;
+        this.rotationSpeed = 5 * Math.PI;
         this.maxHealth = 100;
         this.health = this.maxHealth;
         this.health = 100;
@@ -1232,9 +1279,9 @@ class Player extends MobileModel {
     get maxHp() { return this.maxHealth; }
     get isDead() { return this.dead; }
     ;
-    hit() {
+    hit(damage) {
         if (this.health > 0) {
-            this.health -= 10;
+            this.health -= damage;
         }
         if (this.health < 0) {
             this.health = 0;
@@ -1248,10 +1295,12 @@ class Player extends MobileModel {
     moveUpdate(delta) {
         if (!this.dead) {
             if (this.gun.isFiring) {
-                this.rotateToView();
+                this.rotateToView(delta);
             }
             if (this.moving.forward != 0 || this.moving.sideways != 0) {
-                this.rotateToView();
+                if (!this.gun.isFiring) {
+                    this.rotateToView(delta);
+                }
                 if (this.yVelocity > 0.1 && this.bottomDistance > 0.1) {
                     this.playAction("jump", 0);
                 }
@@ -1292,12 +1341,18 @@ class Player extends MobileModel {
             else {
                 this.playAction("idle");
             }
-            super.moveUpdate(delta);
+            super.moveUpdate(delta, new THREE.Vector3(0, this.level.playerCam.viewRotY, 0));
         }
+        this.rY = ((this.rY + (3 * Math.PI)) % (2 * Math.PI)) - Math.PI;
     }
-    rotateToView() {
-        let rotationY = this.level.playerCam.viewRotY;
-        this.rY = rotationY;
+    rotateToView(delta, instant = false) {
+        let camRotationY = this.level.playerCam.viewRotY;
+        if (instant) {
+            this.rY = camRotationY;
+        }
+        else {
+            this.rY = this.tween.radians(this.rY, camRotationY, this.rotationSpeed * delta);
+        }
     }
     getCameraRotation() {
         return this.cameraRotation;
@@ -1317,11 +1372,15 @@ class PracticeTarget extends Model {
     constructor(level, modelSource = new ModelSource()) {
         super(level, "practice_target", modelSource);
         this.down = false;
+        this.rotationX = 0;
+        this.rotationXUp = 0;
+        this.rotationXDown = Math.PI / 2 - 0.2;
+        this.rotationSpeed = 2 * Math.PI;
+        this.rotationY = this.rY;
         this.resetTimeout = 0;
     }
     hit() {
         if (!this.down) {
-            this.mesh.rotateX(Math.PI / 2 - 0.2);
             this.down = true;
             let max = 25;
             let min = 15;
@@ -1331,9 +1390,19 @@ class PracticeTarget extends Model {
     }
     reset() {
         this.down = false;
-        this.mesh.rotateX(-(Math.PI / 2 - 0.2));
     }
     update(delta) {
+        this.rotVector = new THREE.Vector3();
+        let newRotation;
+        if (this.down) {
+            newRotation = this.rotationXDown;
+        }
+        else {
+            newRotation = this.rotationXUp;
+        }
+        this.rotationX = this.tween.radians(this.rotationX, newRotation, this.rotationSpeed * delta);
+        this.mesh.rotateOnWorldAxis(new THREE.Vector3(1, 0, 0), this.rotationX);
+        this.mesh.rotateOnWorldAxis(new THREE.Vector3(0, 1, 0), this.rotationY);
         if (this.resetTimeout > 0) {
             this.resetTimeout -= delta;
         }
@@ -1581,6 +1650,9 @@ class TurretTop extends Model {
         this.cooldown = 1;
         this.intersectsFilter = new IntersectsFilter(this.level, ["practice_target"], [this.name, this.turretBase.name]);
         this.targetOffset = new THREE.Vector3(0, 3.5, 0);
+        this.rotationSpeed = Math.PI;
+        this.currentRotX = this.rX;
+        this.currentRotY = this.rY;
         this.playerSpotted = false;
         this.health = 100;
         this.destroyed = false;
@@ -1598,8 +1670,32 @@ class TurretTop extends Model {
         }
         return 0.5;
     }
+    turnToTarget(delta) {
+        let target = new THREE.Vector3();
+        target.subVectors(this.target, this.posVector);
+        function calcAngle(x, y) {
+            return Math.atan2(y, x);
+        }
+        this.rX = 0;
+        this.rY = 0;
+        this.rZ = 0;
+        let distanceX = Math.abs(target.x);
+        let distanceZ = Math.abs(target.z);
+        let distance = Math.sqrt(Math.pow(distanceX, 2) + Math.pow(distanceZ, 2));
+        let toRotX = -calcAngle(distance, target.y);
+        this.currentRotX = this.tween.radians(this.currentRotX, toRotX, this.rotationSpeed * delta);
+        this.mesh.rotateOnWorldAxis(new THREE.Vector3(1, 0, 0), this.currentRotX);
+        let toRotY = calcAngle(target.z, target.x);
+        this.currentRotY = this.tween.radians(this.currentRotY, toRotY, this.rotationSpeed * delta);
+        this.mesh.rotateOnWorldAxis(new THREE.Vector3(0, 1, 0), this.currentRotY);
+    }
     fire() {
-        new Bullet(this.level, this.mesh.matrixWorld, this.target, new THREE.Vector3(0, 0, 7), undefined, [this.name, this.turretBase.name], 0xccff00);
+        new Bullet(this.level, this.mesh.matrixWorld, this.currentTarget, new THREE.Vector3(0, 0, 7), undefined, [this.name, this.turretBase.name], 0xccff00, 10);
+    }
+    get currentTarget() {
+        let vector = new THREE.Vector3(0, 0, 10);
+        vector.applyMatrix4(this.getWorldMatrix());
+        return vector;
     }
     update(delta) {
         super.update(delta);
@@ -1617,7 +1713,7 @@ class TurretTop extends Model {
             }
             if (intersects.length > 0 && intersects[0].object.name == "player") {
                 this.target = newTarget;
-                this.mesh.lookAt(this.target);
+                this.turnToTarget(delta);
                 this.playerSpotted = true;
             }
             if (this.cooldown <= 0 && this.playerSpotted) {

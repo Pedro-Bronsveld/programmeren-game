@@ -7,6 +7,7 @@ class Player extends MobileModel{
     private rightKey: number;
     private jumpKey: number;
     private cameraRotation: number;
+    private rotationSpeed: number;
 
     // key states
     private forward: boolean;
@@ -33,6 +34,9 @@ class Player extends MobileModel{
         this.cameraRotation = 0;
         this.hasCollision = true;
         this.hasGravity = true;
+
+        // number of radians the player can rotate in one second
+        this.rotationSpeed = 5*Math.PI;
 
         // setup health
         this.maxHealth = 100;
@@ -93,9 +97,9 @@ class Player extends MobileModel{
     public get maxHp():number{ return this.maxHealth; }
     public get isDead():boolean{ return this.dead };
 
-    public hit():number{
+    public hit(damage:number):number{
         if(this.health > 0){
-            this.health -= 10;
+            this.health -= damage;
         }
         if(this.health < 0){
             this.health = 0;
@@ -199,13 +203,15 @@ class Player extends MobileModel{
             
             if(this.gun.isFiring){
                 // rotate player to view if fire button is being held
-                this.rotateToView();
+                this.rotateToView(delta);
             }
             
             if(this.moving.forward != 0 || this.moving.sideways != 0){
                 // player is moving
-                this.rotateToView();
-    
+                if(!this.gun.isFiring){
+                    this.rotateToView(delta);
+                }
+
                 // determine animation to play
     
                 if(this.yVelocity > 0.1 && this.bottomDistance > 0.1){
@@ -262,16 +268,24 @@ class Player extends MobileModel{
                 this.playAction("idle");
             }
     
-            super.moveUpdate(delta);
+            super.moveUpdate(delta, new THREE.Vector3(0, this.level.playerCam.viewRotY, 0));
         }
+
+        this.rY = ( (this.rY + (3*Math.PI)) % (2 * Math.PI) ) - Math.PI;
 
 
     }
 
-    public rotateToView():void{
-        // set y axis rotation equal to the camera
-        let rotationY:number = this.level.playerCam.viewRotY;
-        this.rY = rotationY;
+    private rotateToView(delta:number, instant:boolean=false):void{
+        let camRotationY:number = this.level.playerCam.viewRotY;
+        if(instant){
+            // set y axis rotation equal to the camera
+            this.rY = camRotationY;
+        }
+        else{
+            // gradually turn to match camera rotation
+            this.rY = this.tween.radians(this.rY, camRotationY, this.rotationSpeed * delta);
+        }
     }
 
     public getCameraRotation():number{

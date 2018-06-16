@@ -7,6 +7,7 @@ class Model extends GameObject{
     protected actions: Actions;
     private mixer: THREE.AnimationMixer;
     private playingAction: string;
+    protected tween: Tween;
 
     constructor(level: Level, meshName: string, modelSource: ModelSource = new ModelSource(), autoAdd:boolean=true){
         super(level, meshName, "Model");
@@ -15,6 +16,9 @@ class Model extends GameObject{
         let meshData: MeshData = level.game.meshDataByName(meshName);
         this.mesh = meshData.mesh;
         let geometry: THREE.Geometry = meshData.geometry;
+
+        // tween functions
+        this.tween = new Tween;
 
         // set name of mesh
         this.mesh.userData.uniqueName = this.name;
@@ -55,7 +59,9 @@ class Model extends GameObject{
         
     }
 
-    public hit():number{
+    public hit(damage:number):number{
+        // ignoring error code by doing this
+        damage = damage;
         // return number of seconds before bullet should despawn
         return 1;
     }

@@ -49,12 +49,16 @@ class Gun extends Model{
         return this.firing;
     }
 
-    private fireStart = () => {
-        this.firing = true;
+    private fireStart = (e: MouseEvent) => {
+        if(e.button == 0){
+            this.firing = true;
+        }
     }
 
-    private fireStop = () => {
-        this.firing = false;
+    private fireStop = (e: MouseEvent) => {
+        if(e.button == 0){
+            this.firing = false;
+        }
     }
 
     public update(delta: number):void{
@@ -75,8 +79,6 @@ class Gun extends Model{
 
             // firing a bullet
             if(this.fireState == 1){
-                // rotate player to right direction
-                this.player.rotateToView();
                 this.fireState = 2;
             }
             else if(this.fireState == 2){

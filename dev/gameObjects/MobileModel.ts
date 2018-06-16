@@ -35,7 +35,7 @@ class MobileModel extends Model{
     }
 
     // move the model relative to its rotation
-    protected moveUpdate(delta: number):void{
+    protected moveUpdate(delta: number, movingRotation:THREE.Vector3=this.rotVector):void{
 
         // get move direction
         let moveZ:number = Math.abs(this.moving.forward);
@@ -76,7 +76,7 @@ class MobileModel extends Model{
 
             // set the transformation to the direction the camera is facing
             let transform: THREE.Vector3 = new THREE.Vector3(velocityX, 0, velocityZ);
-            transform.applyAxisAngle(new THREE.Vector3(0,1,0), this.rY);
+            transform.applyAxisAngle(new THREE.Vector3(0,1,0), movingRotation.y);
             
             // check for collision
             if(this.hasCollision){

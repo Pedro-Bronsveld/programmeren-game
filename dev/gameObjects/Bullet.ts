@@ -3,6 +3,7 @@
 class Bullet extends MobileModel{
 
     private despawnTimeout:number;
+    private damage: number
 
     constructor(
         level: Level,
@@ -12,8 +13,11 @@ class Bullet extends MobileModel{
         ignoreModels:Array<string>=new Array<string>(),
         ignoreNames:Array<string>=new Array<string>(),
         color:number=0xff0000,
+        damage:number=10
         ){
         super(level, "bullet");
+        // damage the bullet does on impact
+        this.damage = damage;
         
         this.hasCollision = true;
         this.collisionBox = new CollisionBox(this, 1, 0.9, 6, 0, 0, -1.5, 5, false, true, new THREE.Vector3(1,1,1), true, ignoreModels, ignoreNames);
@@ -84,7 +88,7 @@ class Bullet extends MobileModel{
 
         // tell model it was hit
         let model:Model = this.level.getModelByName(rayData.model.userData.uniqueName)!;
-        this.despawnTimeout = model.hit();
+        this.despawnTimeout = model.hit(this.damage);
     }
 
     public remove():void{

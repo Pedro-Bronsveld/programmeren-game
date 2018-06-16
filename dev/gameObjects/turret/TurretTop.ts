@@ -5,9 +5,13 @@ class TurretTop extends Model{
     private intersectsFilter: IntersectsFilter;
     private targetOffset: THREE.Vector3;
     private playerSpotted: boolean;
+    private rotationSpeed: number;
     
     private health: number;
     private destroyed: boolean;
+
+    private currentRotX:number;
+    private currentRotY:number;
 
     constructor(level: Level, turretBase: TurretBase){
         super(level, "turret_top");
@@ -16,7 +20,12 @@ class TurretTop extends Model{
         this.cooldown = 1;
         this.intersectsFilter = new IntersectsFilter(this.level, ["practice_target"], [this.name, this.turretBase.name]);
         this.targetOffset = new THREE.Vector3(0, 3.5, 0);
-        // this.turnSpeed = Math.PI;
+
+        // number of radians the turret can rotate in one second
+        this.rotationSpeed = Math.PI;
+
+        this.currentRotX = this.rX;
+        this.currentRotY = this.rY;
 
         this.playerSpotted = false;
 
@@ -44,7 +53,6 @@ class TurretTop extends Model{
         return 0.5;
     }
 
-    /*
     private turnToTarget(delta: number):void{
 
         let target:THREE.Vector3 = new THREE.Vector3();
@@ -54,8 +62,6 @@ class TurretTop extends Model{
         function calcAngle(x:number, y:number) {
             return Math.atan2(y, x);
         }
-
-        let rYstart = this.rY;
 
         this.rX = 0;
         this.rY = 0;
@@ -67,29 +73,29 @@ class TurretTop extends Model{
         let distanceZ:number = Math.abs(target.z);
         let distance:number = Math.sqrt( Math.pow(distanceX,2) + Math.pow(distanceZ,2) );
 
-        let rotX:number = -calcAngle(distance, target.y);
-        // this.rX = rotX;
-        this.mesh.rotateOnWorldAxis(new THREE.Vector3(1,0,0), rotX);
+        // x rotation to turn to
+        let toRotX:number = -calcAngle(distance, target.y);
+        this.currentRotX = this.tween.radians(this.currentRotX, toRotX, this.rotationSpeed * delta);
+        //this.rX = this.currentRotX;
+        this.mesh.rotateOnWorldAxis( new THREE.Vector3(1,0,0), this.currentRotX );
 
+        // y rotation to turn to
+        let toRotY:number = calcAngle(target.z, target.x);
+        this.currentRotY = this.tween.radians(this.currentRotY, toRotY, this.rotationSpeed * delta);
+        //this.rY = this.currentRotY;
+        this.mesh.rotateOnWorldAxis( new THREE.Vector3(0,1,0), this.currentRotY );
         
-
-
-        // rotation on y axis
-        let rotY:number = calcAngle(-target.x, target.z) - Math.PI/2;
-        // this.rY = rotY;
-        
-
-        if(rYstart - this.rY > this.turnSpeed * delta){
-            this.
-        }
-
-        
-
     }
-    */
 
     public fire():void{
-        new Bullet(this.level, this.mesh.matrixWorld, this.target, new THREE.Vector3(0,0,7), undefined, [this.name, this.turretBase.name], 0xccff00 );
+        new Bullet(this.level, this.mesh.matrixWorld, this.currentTarget, new THREE.Vector3(0,0,7), undefined, [this.name, this.turretBase.name], 0xccff00, 10 );
+    }
+
+    private get currentTarget():THREE.Vector3{
+        //returns a target at the position the turret is currently facing.
+        let vector: THREE.Vector3 = new THREE.Vector3(0,0,10);
+        vector.applyMatrix4(this.getWorldMatrix());
+        return vector;
     }
 
     public update(delta:number):void{
@@ -118,7 +124,9 @@ class TurretTop extends Model{
                 // target is in line of sight
                 this.target = newTarget;
     
-                this.mesh.lookAt(this.target);
+                //this.mesh.lookAt(this.target);
+                this.turnToTarget(delta);
+
                 this.playerSpotted = true;
     
             }
