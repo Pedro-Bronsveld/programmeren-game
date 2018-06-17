@@ -57,4 +57,27 @@ class Tween{
         }
     }
 
+    public vector(from:THREE.Vector3, to:THREE.Vector3, step:number):THREE.Vector3{
+        step = Math.abs(step);
+
+        // get distance between two points
+        let difference:number = from.distanceTo(to);
+
+        // return new vector
+        if(difference < step){
+            return to;
+        }
+        else{
+            // direction vector for translation
+            let direction:THREE.Vector3 = new THREE.Vector3();
+            direction.subVectors(to, from ).normalize().multiplyScalar(step);
+
+            // create new point
+            let newPos:THREE.Vector3 = new THREE.Vector3().copy(from);
+            newPos.add(direction);
+
+            return newPos;
+        }
+    }
+
 }

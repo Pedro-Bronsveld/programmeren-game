@@ -69,6 +69,10 @@ class Level{
                 // practice target
                 new PracticeTarget(this, obj);
             }
+            else if(obj.model == "door_frame"){
+                // door frame
+                new Door(this, obj);
+            }
             else if(obj.type == 'MESH'){
                 new Model(this, obj.model, obj);
             }

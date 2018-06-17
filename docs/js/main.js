@@ -677,6 +677,20 @@ class Tween {
             return from + (step * dir);
         }
     }
+    vector(from, to, step) {
+        step = Math.abs(step);
+        let difference = from.distanceTo(to);
+        if (difference < step) {
+            return to;
+        }
+        else {
+            let direction = new THREE.Vector3();
+            direction.subVectors(to, from).normalize().multiplyScalar(step);
+            let newPos = new THREE.Vector3().copy(from);
+            newPos.add(direction);
+            return newPos;
+        }
+    }
 }
 class Utils {
     toHEX(rgb) {
@@ -801,7 +815,7 @@ class Menu {
         }
     }
     start() {
-        this.game.loadLevel("beta_level");
+        this.game.loadLevel("level_1");
     }
     continue() {
         this.visible = false;
@@ -1015,6 +1029,52 @@ class Bullet extends MobileModel {
     }
     update(delta) {
         this.moveUpdate(delta);
+    }
+}
+class Door extends Model {
+    constructor(level, modelSource = new ModelSource()) {
+        super(level, "door_frame", modelSource);
+        this.isOpen = false;
+        this.doorLeft = this.loadDoor();
+        this.doorRight = this.loadDoor(-1);
+        this.closeOffset = new THREE.Vector3(0, 0, 0);
+        this.openOffset = new THREE.Vector3(7.8, 0, 0);
+        this.openOffset.applyAxisAngle(new THREE.Vector3(1, 0, 0), this.rX);
+        this.openOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.rY);
+        this.openOffset.applyAxisAngle(new THREE.Vector3(0, 0, 1), this.rZ);
+        this.openSpeed = 20;
+    }
+    get open() {
+        return this.isOpen;
+    }
+    set open(state) {
+        this.isOpen = state;
+    }
+    loadDoor(side = 1) {
+        let door = new Model(this.level, "door");
+        door.posVector = this.posVector;
+        door.rotVector = this.rotVector;
+        door.sX = side;
+        return door;
+    }
+    detectPlayer() {
+        let distance = this.posVector.distanceTo(this.level.player.posVector);
+        this.open = distance < 20;
+    }
+    update(delta) {
+        this.detectPlayer();
+        let newLeftPos = new THREE.Vector3().copy(this.posVector);
+        let newRightPos = new THREE.Vector3().copy(this.posVector);
+        if (this.open) {
+            newLeftPos.add(this.openOffset);
+            newRightPos.add(new THREE.Vector3().copy(this.openOffset).multiplyScalar(-1));
+        }
+        else {
+            newLeftPos.add(this.closeOffset);
+            newRightPos.add(new THREE.Vector3().copy(this.closeOffset).multiplyScalar(-1));
+        }
+        this.doorLeft.posVector = this.tween.vector(this.doorLeft.posVector, newLeftPos, this.openSpeed * delta);
+        this.doorRight.posVector = this.tween.vector(this.doorRight.posVector, newRightPos, this.openSpeed * delta);
     }
 }
 class Gun extends Model {
@@ -1414,6 +1474,39 @@ class PracticeTarget extends Model {
         }
     }
 }
+class TriggerTarget extends Model {
+    constructor(level, modelSource = new ModelSource()) {
+        super(level, "trigger_target", modelSource);
+        this.down = false;
+        this.rotationX = 0;
+        this.rotationXUp = 0;
+        this.rotationXDown = Math.PI;
+        this.rotationSpeed = 2 * Math.PI;
+        this.rotationY = this.rY;
+    }
+    hit() {
+        if (!this.down) {
+            this.down = true;
+        }
+        return 0.1;
+    }
+    reset() {
+        this.down = false;
+    }
+    update(delta) {
+        this.rotVector = new THREE.Vector3();
+        let newRotation;
+        if (this.down) {
+            newRotation = this.rotationXDown;
+        }
+        else {
+            newRotation = this.rotationXUp;
+        }
+        this.rotationX = this.tween.radians(this.rotationX, newRotation, this.rotationSpeed * delta);
+        this.mesh.rotateOnWorldAxis(new THREE.Vector3(1, 0, 0), this.rotationX);
+        this.mesh.rotateOnWorldAxis(new THREE.Vector3(0, 1, 0), this.rotationY);
+    }
+}
 class CollisionBox {
     constructor(model, sizeX = 0, sizeY = 0, sizeZ = 0, offsetX = 0, offsetY = 0, offsetZ = 0, extraDistance = 1, gravity = false, rotationEnabled = false, givenSegments = new THREE.Vector3(), centerVertex = true, ignoreModels = new Array(), ignoreNames = new Array()) {
         this.model = model;
@@ -1754,6 +1847,9 @@ class Level {
             }
             else if (obj.model == "practice_target") {
                 new PracticeTarget(this, obj);
+            }
+            else if (obj.model == "door_frame") {
+                new Door(this, obj);
             }
             else if (obj.type == 'MESH') {
                 new Model(this, obj.model, obj);
