@@ -53,22 +53,34 @@ class Game{
 
     // get level data by level name
     public levelDataByName(name: string):LevelSrcData{
+        let errorNum:number = 0;
+        let i:number = 0;
         for(let levelData of this.levelsData){
             if(levelData.name == name){
                 return levelData;
             }
+            else if(levelData.name == "error_level"){
+                errorNum = i;
+            }
+            i++;
         }
-        return this.levelsData[0];
+        return this.levelsData[errorNum];
     }
 
     // get mesh data by name
     public meshDataByName(name: string):MeshData{
+        let errorNum:number = 0;
+        let i:number = 0;
         for(let meshData of this.meshesData){
             if(meshData.name == name){
                 return meshData;
             }
+            else if(meshData.name == "error"){
+                errorNum = i;
+            }
+            i++;
         }
-        return this.meshesData[0];
+        return this.meshesData[errorNum];
     }
 
     public loadLevel(name: string):void{

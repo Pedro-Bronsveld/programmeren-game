@@ -36,20 +36,32 @@ class Game {
     ;
     getRenderer() { return this.propRenderer; }
     levelDataByName(name) {
+        let errorNum = 0;
+        let i = 0;
         for (let levelData of this.levelsData) {
             if (levelData.name == name) {
                 return levelData;
             }
+            else if (levelData.name == "error_level") {
+                errorNum = i;
+            }
+            i++;
         }
-        return this.levelsData[0];
+        return this.levelsData[errorNum];
     }
     meshDataByName(name) {
+        let errorNum = 0;
+        let i = 0;
         for (let meshData of this.meshesData) {
             if (meshData.name == name) {
                 return meshData;
             }
+            else if (meshData.name == "error") {
+                errorNum = i;
+            }
+            i++;
         }
-        return this.meshesData[0];
+        return this.meshesData[errorNum];
     }
     loadLevel(name) {
         if (name == "main_menu") {
@@ -815,7 +827,7 @@ class Menu {
         }
     }
     start() {
-        this.game.loadLevel("level_1");
+        this.game.loadLevel("beta_level");
     }
     continue() {
         this.visible = false;

@@ -98,7 +98,7 @@ class Menu{
 
     // button functions
     private start():void{
-        this.game.loadLevel("level_1");
+        this.game.loadLevel("beta_level");
     }
     private continue():void{
         this.visible = false;
