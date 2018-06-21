@@ -1596,10 +1596,12 @@ class TriggerTarget extends Model {
         this.rotationXDown = Math.PI;
         this.rotationSpeed = 2 * Math.PI;
         this.rotationY = this.rY;
+        this.sound = new ModelSound(this.level.game, this, ["bell_hit"]);
     }
     hit() {
         if (!this.down) {
             this.down = true;
+            this.sound.play("bell_hit", 1);
         }
         return 0.1;
     }
@@ -1862,7 +1864,7 @@ class TurretTop extends Model {
         this.playerSpotted = false;
         this.health = 100;
         this.destroyed = false;
-        this.sound = new ModelSound(this.level.game, this, ["laser_2"]);
+        this.sound = new ModelSound(this.level.game, this, ["laser_2", "explosion"]);
     }
     hit() {
         if (this.health > 0) {
@@ -1874,6 +1876,7 @@ class TurretTop extends Model {
             this.mesh.lookAt(target);
             this.level.addNoCollisionName(this.name);
             this.playAction("destroy", 0);
+            this.sound.play("explosion", 1, true);
         }
         return 0.5;
     }

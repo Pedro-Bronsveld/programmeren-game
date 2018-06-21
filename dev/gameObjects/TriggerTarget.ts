@@ -7,6 +7,7 @@ class TriggerTarget extends Model{
     private rotationXDown:number;
     
     private rotationY:number;
+    private sound: ModelSound;
 
     constructor(level: Level, modelSource: ModelSource = new ModelSource()){
         super(level, "trigger_target", modelSource);
@@ -19,12 +20,14 @@ class TriggerTarget extends Model{
 
         // default rotation
         this.rotationY = this.rY;
+
+        this.sound = new ModelSound(this.level.game, this, ["bell_hit"]);
     }
 
     public hit():number{
         if(!this.down){
             this.down = true;
-
+            this.sound.play("bell_hit", 1);
         }
         return 0.1;
     }

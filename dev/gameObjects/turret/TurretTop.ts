@@ -34,7 +34,7 @@ class TurretTop extends Model{
         this.health = 100;
         this.destroyed = false;
 
-        this.sound = new ModelSound(this.level.game, this, ["laser_2"]);
+        this.sound = new ModelSound(this.level.game, this, ["laser_2", "explosion"]);
     }
 
     public hit():number{
@@ -53,6 +53,8 @@ class TurretTop extends Model{
             this.level.addNoCollisionName(this.name);
 
             this.playAction("destroy", 0);
+
+            this.sound.play("explosion", 1, true);
         }
         return 0.5;
     }
