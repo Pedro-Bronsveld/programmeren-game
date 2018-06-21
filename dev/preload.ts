@@ -13,7 +13,12 @@ class PreLoad{
     private preloadedSounds: PreloadedStates;
     private loadedSounds: Array<SoundData>;
 
+    private loadingScreen:LoadingScreen;
+
     constructor(){
+        // create loading screen
+        this.loadingScreen = new LoadingScreen();
+
         // setup paths for asset directories
         this.assetsDir = "assets";
         this.modelsDir = this.assetsDir + "/models";
@@ -146,30 +151,35 @@ class PreLoad{
     }
 
     private waitForLoad():void{
-        let loadingDone = ():boolean => {
-            // check if all models have been loaded
-            for(let key in this.preloadedMeshes){
-                let state = this.preloadedMeshes[key];
-                if(!state){
-                    return false
-                }
+        // count number of items that have been loaded
+        let totalItems:number = 0;
+        let loadedItems:number = 0;
+        // check if all models have been loaded
+        for(let key in this.preloadedMeshes){
+            let state = this.preloadedMeshes[key];
+            totalItems++;
+            if(state){
+                loadedItems++;
             }
-            for(let key in this.preloadedLevels){
-                let state = this.preloadedLevels[key];
-                if(!state){
-                    return false
-                }
-            }
-            for(let key in this.preloadedSounds){
-                let state = this.preloadedSounds[key];
-                if(!state){
-                    return false
-                }
-            }
-            return true
         }
+        for(let key in this.preloadedLevels){
+            let state = this.preloadedLevels[key];
+            totalItems++;
+            if(state){
+                loadedItems++;
+            }
+        }
+        for(let key in this.preloadedSounds){
+            let state = this.preloadedSounds[key];
+            totalItems++;
+            if(state){
+                loadedItems++;
+            }
+        }
+
+        this.loadingScreen.update(loadedItems, totalItems);
         
-        if(!loadingDone()){
+        if(loadedItems < totalItems){
             requestAnimationFrame( () => this.waitForLoad() );
         }
         else{

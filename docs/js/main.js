@@ -99,6 +99,7 @@ class Game {
 let game;
 class PreLoad {
     constructor() {
+        this.loadingScreen = new LoadingScreen();
         this.assetsDir = "assets";
         this.modelsDir = this.assetsDir + "/models";
         this.levelsDir = this.assetsDir + "/levels";
@@ -173,28 +174,31 @@ class PreLoad {
         });
     }
     waitForLoad() {
-        let loadingDone = () => {
-            for (let key in this.preloadedMeshes) {
-                let state = this.preloadedMeshes[key];
-                if (!state) {
-                    return false;
-                }
+        let totalItems = 0;
+        let loadedItems = 0;
+        for (let key in this.preloadedMeshes) {
+            let state = this.preloadedMeshes[key];
+            totalItems++;
+            if (state) {
+                loadedItems++;
             }
-            for (let key in this.preloadedLevels) {
-                let state = this.preloadedLevels[key];
-                if (!state) {
-                    return false;
-                }
+        }
+        for (let key in this.preloadedLevels) {
+            let state = this.preloadedLevels[key];
+            totalItems++;
+            if (state) {
+                loadedItems++;
             }
-            for (let key in this.preloadedSounds) {
-                let state = this.preloadedSounds[key];
-                if (!state) {
-                    return false;
-                }
+        }
+        for (let key in this.preloadedSounds) {
+            let state = this.preloadedSounds[key];
+            totalItems++;
+            if (state) {
+                loadedItems++;
             }
-            return true;
-        };
-        if (!loadingDone()) {
+        }
+        this.loadingScreen.update(loadedItems, totalItems);
+        if (loadedItems < totalItems) {
             requestAnimationFrame(() => this.waitForLoad());
         }
         else {
@@ -467,6 +471,23 @@ class LightSource {
             energy: 1,
             spot_size: 0
         };
+    }
+}
+class LoadingScreen {
+    constructor() {
+        this.el = document.createElement("loadingscreen");
+        document.body.appendChild(this.el);
+        this.header = document.createElement("h1");
+        this.header.innerHTML = "Loading...";
+        this.el.appendChild(this.header);
+        this.loadingContainer = document.createElement("loadingcontainer");
+        this.el.appendChild(this.loadingContainer);
+        this.loadingBar = document.createElement("loadingbar");
+        this.loadingContainer.appendChild(this.loadingBar);
+    }
+    update(loadedItems, totalItems) {
+        let scaleX = loadedItems / totalItems;
+        this.loadingBar.style.width = (scaleX * 100) + "%";
     }
 }
 class LocRot {
