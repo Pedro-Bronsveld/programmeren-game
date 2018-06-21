@@ -1,5 +1,5 @@
 class Menu{
-    private game: Game;
+    private propGame: Game;
     private element: HTMLElement;
     private buttonsContainer: HTMLElement;
     private buttons: Array<MenuButton>;
@@ -8,7 +8,7 @@ class Menu{
     private headerElement: HTMLElement;
 
     constructor(game: Game){
-        this.game = game;
+        this.propGame = game;
 
         this.isVisible = false;
 
@@ -30,20 +30,24 @@ class Menu{
         // create the buttons in the menu
         this.buttons = new Array<MenuButton>();
         // create the start button
-        this.addButton( new MenuButton("start", () => this.start(), ["main"], true) );
+        this.addButton( new MenuButton(this, "start", () => this.start(), ["main"], true) );
 
         // create continue button
-        this.addButton( new MenuButton("continue", () => this.continue(), ["pause"], true ) );
+        this.addButton( new MenuButton(this, "continue", () => this.continue(), ["pause"], true ) );
+        // create next level button
+        this.addButton( new MenuButton(this, "next level", () => this.next(), ["level_complete"], true ) );
         // create reload button
-        this.addButton( new MenuButton("reload level", () => this.reload(), ["pause", "dead"], true ) );
+        this.addButton( new MenuButton(this, "reload level", () => this.reload(), ["pause", "dead", "level_complete"], true ) );
         // create quit button
-        this.addButton( new MenuButton("quit", () => this.quit(), ["pause", "dead"], true ) );
+        this.addButton( new MenuButton(this, "quit", () => this.quit(), ["pause", "dead", "level_complete"], true ) );
 
         this.game.events.menuKeys = this.keyHandler;
 
         // set state of menu
         this.setState("main");
     }
+
+    public get game():Game{ return this.propGame };
 
     private addButton(button: MenuButton):void{
         this.buttons.push(button)
@@ -86,6 +90,9 @@ class Menu{
                 case "main":
                     this.header = "Main Menu";
                     break;
+                case "level_complete":
+                    this.header = "Level Complete";
+                    break;
                 case "pause":
                     this.header = "Game Paused";
                     break;
@@ -98,7 +105,10 @@ class Menu{
 
     // button functions
     private start():void{
-        this.game.loadLevel("beta_level");
+        this.game.loadLevel("level_0");
+    }
+    private next():void{
+        this.game.loadLevel(this.game.level.nextLevel);
     }
     private continue():void{
         this.visible = false;
@@ -117,7 +127,7 @@ class Menu{
     }
     public set visible(visible:boolean){
         //don't hide menu if the gameover screen is up
-        if(visible == false && this.state == "dead"){
+        if(visible == false && (this.state == "dead" || this.state == "level_complete")){
             return;
         }
 
@@ -140,6 +150,9 @@ class Menu{
         }
         else if(this.game.level.player.isDead){
             this.setState("dead");
+        }
+        else if(this.game.level.complete){
+            this.setState("level_complete");
         }
         else{
             this.setState("pause");

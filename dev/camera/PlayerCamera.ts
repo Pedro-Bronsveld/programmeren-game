@@ -47,6 +47,9 @@ class PlayerCamera extends Camera{
 
         // change what way player is facing
         this.viewRotateY = viewRotate;
+
+        // add audio listener to camera
+        this.camera.add(level.game.sound.listener);
         
     }
 

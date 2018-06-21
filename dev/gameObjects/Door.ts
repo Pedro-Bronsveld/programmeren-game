@@ -8,9 +8,12 @@ class Door extends Model{
     private closeOffset: THREE.Vector3;
 
     private openSpeed: number;
+    private sound: ModelSound;
+    private detect: boolean;
 
-    constructor(level: Level, modelSource: ModelSource = new ModelSource()){
+    constructor(level: Level, modelSource: ModelSource = new ModelSource(), detect:boolean=false){
         super(level, "door_frame", modelSource);
+        this.detect = detect;
 
         this.isOpen = false;
 
@@ -27,13 +30,16 @@ class Door extends Model{
 
         // how fast the door should move in one second
         this.openSpeed = 20;
+
+        // create sound object
+        this.sound = new ModelSound(this.level.game, this, ["door"]);
         
     }
 
-    private get open():boolean{
+    public get open():boolean{
         return this.isOpen;
     }
-    private set open(state:boolean){
+    public set open(state:boolean){
         this.isOpen = state;
     }
 
@@ -54,7 +60,27 @@ class Door extends Model{
     }
 
     public update(delta:number){
-        this.detectPlayer();
+        let wasOpen:boolean = this.open;
+        
+        if(this.detect){
+            // atomatically open
+            this.detectPlayer();
+        }
+        else{
+            // check if all trigger targets in the level have been hit
+            let targetsDown:number = 0;
+            for(let target of this.level.triggerTargets){
+                if(target.isDown){
+                    targetsDown++;
+                }
+            }
+
+            this.open = targetsDown >= this.level.triggerTargets.length;
+        }
+
+        if(wasOpen != this.open){
+            this.sound.play("door", 1, true);
+        }
 
         let newLeftPos: THREE.Vector3 = new THREE.Vector3().copy(this.posVector);
         let newRightPos: THREE.Vector3 = new THREE.Vector3().copy(this.posVector);

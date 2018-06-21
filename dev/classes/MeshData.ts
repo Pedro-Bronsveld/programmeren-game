@@ -1,7 +1,7 @@
 class MeshData{
-    public name:string;
+    readonly name:string;
     private templateMesh: THREE.Mesh | THREE.SkinnedMesh;
-    public geometry: THREE.Geometry;
+    readonly geometry: THREE.Geometry;
 
     constructor(name:string, mesh:THREE.Mesh | THREE.SkinnedMesh, geometry: THREE.Geometry){
         this.name = name;

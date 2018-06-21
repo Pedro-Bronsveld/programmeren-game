@@ -23,6 +23,7 @@ levels_dir = blender_dir + "/levels"
 assets_dir = root_dir + "/docs/assets"
 export_models_dir = assets_dir + "/models"
 export_levels_dir = assets_dir + "/levels"
+sounds_dir = assets_dir + "/sounds"
 
 #enable three exporter:
 addon_utils.enable(module_name="io_three")
@@ -111,10 +112,17 @@ for directory in os.walk(export_models_dir):
     models_list = directory[1] 
     break
 
+#get all sounds names:
+sounds_list = []
+for root, dirs, files in os.walk(sounds_dir):
+    for filename in files:
+        sounds_list.append(filename)
+
 #structure preload data:
 preload_data = {
     "models" : models_list,
-    "levels" : levels_list
+    "levels" : levels_list,
+    "sounds" : sounds_list
 }
 
 #write list of models and levels to json file:

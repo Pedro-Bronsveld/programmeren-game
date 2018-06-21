@@ -29,9 +29,15 @@ class TriggerTarget extends Model{
         return 0.1;
     }
 
+    public get isDown():boolean{
+        return this.down;
+    }
+
+    /*
     private reset():void{
         this.down = false;
     }
+    */
 
     public update(delta: number){
 

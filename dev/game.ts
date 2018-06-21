@@ -9,13 +9,17 @@ class Game{
     private propElement: HTMLElement;
     private propMenu: Menu;
     private eventHandler: EventHandler;
+    private globalSound: GlobalSound;
+    private levelOrder: Array<string>;
 
     private levelsData: Array<LevelSrcData>;
     private meshesData: Array<MeshData>;
+    private soundsData: Array<SoundData>;
 
-    constructor(levelsData: Array<LevelSrcData>, meshesData: Array<MeshData>){
+    constructor(levelsData: Array<LevelSrcData>, meshesData: Array<MeshData>, soundsData:Array<SoundData>){
         this.levelsData = levelsData;
         this.meshesData = meshesData;
+        this.soundsData = soundsData;
         this.propElement = <HTMLElement>document.getElementsByTagName("game")[0];
 
         this.eventHandler = new EventHandler();
@@ -24,9 +28,15 @@ class Game{
         this.propRenderer = new Renderer();
         // menu
         this.propMenu = new Menu(this);
+        
+        // set order of levels
+        this.levelOrder = ["main_menu", "level_0", "level_1", "level_2", "level_3"];
 
         // hud
         this.propHud = new Hud(this);
+
+        // global sound
+        this.globalSound = new GlobalSound(this);
 
         // level
         // this.propLevel = new Level(this, "level_1");
@@ -48,8 +58,7 @@ class Game{
     public get hud():Hud{ return this.propHud };
     public get menu():Menu{ return this.propMenu };
     public get events():EventHandler{ return this.eventHandler };
-
-    public getRenderer():Renderer{return this.propRenderer;}
+    public get sound():GlobalSound{ return this.globalSound };
 
     // get level data by level name
     public levelDataByName(name: string):LevelSrcData{
@@ -81,6 +90,29 @@ class Game{
             i++;
         }
         return this.meshesData[errorNum];
+    }
+
+    // get sound data by name
+    public soundDataByName(name:string):SoundData{
+        let errorNum:number = 0;
+        let i:number = 0;
+        for(let soundData of this.soundsData){
+            if(soundData.name == name){
+                return soundData;
+            }
+            else if(soundData.name == "error"){
+                errorNum = i;
+            }
+            i++;
+        }
+        return this.soundsData[errorNum];
+    }
+
+    // check what level comes after a level
+    public checkNextLevel(level:string):string{
+        let levelIndex:number = this.levelOrder.indexOf(level);
+        levelIndex = (levelIndex+1) % this.levelOrder.length;
+        return this.levelOrder[levelIndex];
     }
 
     public loadLevel(name: string):void{

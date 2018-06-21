@@ -7,6 +7,7 @@ class Gun extends Model{
     private enabled: boolean;
     private firing: boolean;
     private cooldown: number;
+    private sound: ModelSound;
 
     constructor(level: Level, player: Player){
         super(level, "gun", undefined, false);
@@ -42,6 +43,9 @@ class Gun extends Model{
         // add event listeners
         this.level.game.events.gunFireStart = this.fireStart;
         this.level.game.events.gunFireStop = this.fireStop;
+
+        // create sound object
+        this.sound = new ModelSound(this.level.game, this, ["laser_9"]);
         
     }
 
@@ -75,6 +79,7 @@ class Gun extends Model{
             // check if bullet can and should be fired
             if(this.fireState == 0 && this.enabled && this.firing && this.cooldown == 0){
                 this.fireState = 1;
+                this.sound.play("laser_9", 0.5, true);
             }
 
             // firing a bullet

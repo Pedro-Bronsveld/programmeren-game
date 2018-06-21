@@ -10,7 +10,7 @@ class Model extends GameObject{
     protected tween: Tween;
 
     constructor(level: Level, meshName: string, modelSource: ModelSource = new ModelSource(), autoAdd:boolean=true){
-        super(level, meshName, "Model");
+        super(level, meshName, "Model", modelSource.name);
         
         // get mesh data
         let meshData: MeshData = level.game.meshDataByName(meshName);

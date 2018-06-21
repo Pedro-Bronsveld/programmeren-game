@@ -13,16 +13,18 @@ class TurretTop extends Model{
     private currentRotX:number;
     private currentRotY:number;
 
+    private sound: ModelSound;
+
     constructor(level: Level, turretBase: TurretBase){
         super(level, "turret_top");
         this.turretBase = turretBase;
         this.target = new THREE.Vector3();
-        this.cooldown = 1;
+        this.cooldown = 0.5;
         this.intersectsFilter = new IntersectsFilter(this.level, ["practice_target"], [this.name, this.turretBase.name]);
         this.targetOffset = new THREE.Vector3(0, 3.5, 0);
 
         // number of radians the turret can rotate in one second
-        this.rotationSpeed = Math.PI;
+        this.rotationSpeed = Math.PI/2;
 
         this.currentRotX = this.rX;
         this.currentRotY = this.rY;
@@ -31,6 +33,8 @@ class TurretTop extends Model{
 
         this.health = 100;
         this.destroyed = false;
+
+        this.sound = new ModelSound(this.level.game, this, ["laser_2"]);
     }
 
     public hit():number{
@@ -88,6 +92,7 @@ class TurretTop extends Model{
     }
 
     public fire():void{
+        this.sound.play("laser_2", 1, true);
         new Bullet(this.level, this.mesh.matrixWorld, this.currentTarget, new THREE.Vector3(0,0,7), undefined, [this.name, this.turretBase.name], 0xccff00, 10 );
     }
 
@@ -133,7 +138,7 @@ class TurretTop extends Model{
     
             if(this.cooldown <= 0 && this.playerSpotted){
                 this.fire();
-                this.cooldown = 1;
+                this.cooldown = 0.5;
             }
         }
 

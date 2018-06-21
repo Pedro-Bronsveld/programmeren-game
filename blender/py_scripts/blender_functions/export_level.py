@@ -32,6 +32,13 @@ def export(export_levels_dir, export_models_dir, meshes_list):
             'y': 0,
             'z': 0
         },
+        'level_end':{
+            'x': 0,
+            'y': 0,
+            'z': 0,
+            'use': False,
+            'radius': 0
+        },
         'view_rotate': 0
     }
     
@@ -47,9 +54,20 @@ def export(export_levels_dir, export_models_dir, meshes_list):
         level['player_start']['z'] = player_start.location.y * -1
         level['view_rotate'] = player_start.rotation_euler.z
         
-
     except:
         print("Player start position not set, 0,0,0 will be used.")
+
+    #check if level end spehere is set:
+    try:
+        level_end = scene_objects['level_end']
+        level['level_end']['x'] = level_end.location.x
+        level['level_end']['y'] = level_end.location.z
+        level['level_end']['z'] = level_end.location.y * -1
+        level['level_end']['use'] = True
+        level['level_end']['radius'] = level_end.scale.x
+
+    except:
+        print("Level end not set.")
     
     #loop through all objects in the scene:
     for scene_object in scene_objects:

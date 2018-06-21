@@ -3,10 +3,12 @@ class GameObject{
     protected propLevel: Level;
     protected objectType: string;
     readonly modelName: string;
-    constructor(level: Level, name: string,  objectType: string){
+    readonly blendName: string
+    constructor(level: Level, name: string,  objectType: string, blendName:string=""){
         this.modelName = name;
         this.propLevel = level;
         this.name = this.uniqueName(name, this.level);
+        this.blendName = blendName;
         this.objectType = objectType;
     }
 

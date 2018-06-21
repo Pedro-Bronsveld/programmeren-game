@@ -1,6 +1,6 @@
 "use strict";
 class Game {
-    constructor(levelsData, meshesData) {
+    constructor(levelsData, meshesData, soundsData) {
         this.gameloop = () => {
             let delta = this.propClock.getDelta();
             this.level.update(delta);
@@ -11,11 +11,14 @@ class Game {
         };
         this.levelsData = levelsData;
         this.meshesData = meshesData;
+        this.soundsData = soundsData;
         this.propElement = document.getElementsByTagName("game")[0];
         this.eventHandler = new EventHandler();
         this.propRenderer = new Renderer();
         this.propMenu = new Menu(this);
+        this.levelOrder = ["main_menu", "level_0", "level_1", "level_2", "level_3"];
         this.propHud = new Hud(this);
+        this.globalSound = new GlobalSound(this);
         this.propLevel = new MainMenu(this);
         this.propClock = new THREE.Clock();
         this.gameloop();
@@ -34,7 +37,8 @@ class Game {
     ;
     get events() { return this.eventHandler; }
     ;
-    getRenderer() { return this.propRenderer; }
+    get sound() { return this.globalSound; }
+    ;
     levelDataByName(name) {
         let errorNum = 0;
         let i = 0;
@@ -63,6 +67,25 @@ class Game {
         }
         return this.meshesData[errorNum];
     }
+    soundDataByName(name) {
+        let errorNum = 0;
+        let i = 0;
+        for (let soundData of this.soundsData) {
+            if (soundData.name == name) {
+                return soundData;
+            }
+            else if (soundData.name == "error") {
+                errorNum = i;
+            }
+            i++;
+        }
+        return this.soundsData[errorNum];
+    }
+    checkNextLevel(level) {
+        let levelIndex = this.levelOrder.indexOf(level);
+        levelIndex = (levelIndex + 1) % this.levelOrder.length;
+        return this.levelOrder[levelIndex];
+    }
     loadLevel(name) {
         if (name == "main_menu") {
             this.propLevel = new MainMenu(this);
@@ -79,13 +102,17 @@ class PreLoad {
         this.assetsDir = "assets";
         this.modelsDir = this.assetsDir + "/models";
         this.levelsDir = this.assetsDir + "/levels";
+        this.soundsDir = this.assetsDir + "/sounds";
         this.preloadedMeshes = {};
         this.loadedMeshes = new Array();
         this.preloadedLevels = {};
         this.loadedLevels = new Array();
+        this.preloadedSounds = {};
+        this.loadedSounds = new Array();
         reqwest(this.assetsDir + "/preload_list.json", (preloadData) => {
             let modelNames = preloadData.models;
             let levelNames = preloadData.levels;
+            let soundFiles = preloadData.sounds;
             for (let name of modelNames) {
                 this.preloadedMeshes[name] = false;
                 this.loadMesh(name);
@@ -93,6 +120,10 @@ class PreLoad {
             for (let name of levelNames) {
                 this.preloadedLevels[name] = false;
                 this.loadLevel(name);
+            }
+            for (let filename of soundFiles) {
+                this.preloadedSounds[filename] = false;
+                this.loadSound(filename);
             }
             this.waitForLoad();
         });
@@ -128,6 +159,19 @@ class PreLoad {
             this.preloadedLevels[name] = true;
         });
     }
+    loadSound(filename) {
+        let audioLoader = new THREE.AudioLoader();
+        let filenameArray = filename.split(".");
+        let name = filenameArray.slice(0, filenameArray.length - 1).join(".");
+        let soundSrc = this.soundsDir + "/" + filename;
+        audioLoader.load(soundSrc, (buffer) => {
+            this.loadedSounds.push(new SoundData(name, buffer));
+            this.preloadedSounds[filename] = true;
+        }, function () {
+        }, function () {
+            console.log('An error occured when loading' + filename);
+        });
+    }
     waitForLoad() {
         let loadingDone = () => {
             for (let key in this.preloadedMeshes) {
@@ -142,19 +186,25 @@ class PreLoad {
                     return false;
                 }
             }
+            for (let key in this.preloadedSounds) {
+                let state = this.preloadedSounds[key];
+                if (!state) {
+                    return false;
+                }
+            }
             return true;
         };
         if (!loadingDone()) {
             requestAnimationFrame(() => this.waitForLoad());
         }
         else {
-            game = new Game(this.loadedLevels, this.loadedMeshes);
+            game = new Game(this.loadedLevels, this.loadedMeshes, this.loadedSounds);
         }
     }
 }
 window.addEventListener("load", () => new PreLoad());
 class GameObject {
-    constructor(level, name, objectType) {
+    constructor(level, name, objectType, blendName = "") {
         this.uniqueName = (name, level) => {
             let uniqueName = name;
             let num = 0;
@@ -168,6 +218,7 @@ class GameObject {
         this.modelName = name;
         this.propLevel = level;
         this.name = this.uniqueName(name, this.level);
+        this.blendName = blendName;
         this.objectType = objectType;
     }
     get level() {
@@ -281,6 +332,7 @@ class PlayerCamera extends Camera {
         this.crosshair.sX = 0.002;
         this.camera.add(this.crosshair.getMesh());
         this.viewRotateY = viewRotate;
+        this.camera.add(level.game.sound.listener);
     }
     getTarget() {
         let direction = new THREE.Vector3(0, 0, -1);
@@ -376,6 +428,21 @@ class EventHandler {
         window.addEventListener("keypress", (e) => this.menuKeys(e));
         window.addEventListener("mousedown", (e) => this.gunFireStart(e));
         window.addEventListener("mouseup", (e) => this.gunFireStop(e));
+    }
+}
+class LevelEnd {
+    constructor(level, levelSrcData) {
+        this.level = level;
+        this.use = levelSrcData.level_end.use;
+        this.position = new THREE.Vector3(levelSrcData.level_end.x, levelSrcData.level_end.y, levelSrcData.level_end.z);
+        this.radius = levelSrcData.level_end.radius;
+    }
+    update() {
+        if (this.use && this.position.distanceTo(this.level.player.posVector) < this.radius) {
+            this.level.complete = true;
+            this.level.game.menu.visible = true;
+            this.level.game.renderer.unlockPointer();
+        }
     }
 }
 class LightSource {
@@ -488,7 +555,7 @@ class Renderer {
 }
 class Model extends GameObject {
     constructor(level, meshName, modelSource = new ModelSource(), autoAdd = true) {
-        super(level, meshName, "Model");
+        super(level, meshName, "Model", modelSource.name);
         let meshData = level.game.meshDataByName(meshName);
         this.mesh = meshData.mesh;
         let geometry = meshData.geometry;
@@ -778,7 +845,7 @@ class Menu {
                 }
             }
         };
-        this.game = game;
+        this.propGame = game;
         this.isVisible = false;
         this.state = "pause";
         this.element = document.createElement("gamemenu");
@@ -788,13 +855,16 @@ class Menu {
         this.headerElement = document.createElement("headertext");
         this.buttonsContainer.appendChild(this.headerElement);
         this.buttons = new Array();
-        this.addButton(new MenuButton("start", () => this.start(), ["main"], true));
-        this.addButton(new MenuButton("continue", () => this.continue(), ["pause"], true));
-        this.addButton(new MenuButton("reload level", () => this.reload(), ["pause", "dead"], true));
-        this.addButton(new MenuButton("quit", () => this.quit(), ["pause", "dead"], true));
+        this.addButton(new MenuButton(this, "start", () => this.start(), ["main"], true));
+        this.addButton(new MenuButton(this, "continue", () => this.continue(), ["pause"], true));
+        this.addButton(new MenuButton(this, "next level", () => this.next(), ["level_complete"], true));
+        this.addButton(new MenuButton(this, "reload level", () => this.reload(), ["pause", "dead", "level_complete"], true));
+        this.addButton(new MenuButton(this, "quit", () => this.quit(), ["pause", "dead", "level_complete"], true));
         this.game.events.menuKeys = this.keyHandler;
         this.setState("main");
     }
+    get game() { return this.propGame; }
+    ;
     addButton(button) {
         this.buttons.push(button);
         this.buttonsContainer.appendChild(button.element);
@@ -817,6 +887,9 @@ class Menu {
                 case "main":
                     this.header = "Main Menu";
                     break;
+                case "level_complete":
+                    this.header = "Level Complete";
+                    break;
                 case "pause":
                     this.header = "Game Paused";
                     break;
@@ -827,7 +900,10 @@ class Menu {
         }
     }
     start() {
-        this.game.loadLevel("beta_level");
+        this.game.loadLevel("level_0");
+    }
+    next() {
+        this.game.loadLevel(this.game.level.nextLevel);
     }
     continue() {
         this.visible = false;
@@ -843,7 +919,7 @@ class Menu {
         return this.isVisible;
     }
     set visible(visible) {
-        if (visible == false && this.state == "dead") {
+        if (visible == false && (this.state == "dead" || this.state == "level_complete")) {
             return;
         }
         if (visible != this.visible) {
@@ -862,19 +938,25 @@ class Menu {
         else if (this.game.level.player.isDead) {
             this.setState("dead");
         }
+        else if (this.game.level.complete) {
+            this.setState("level_complete");
+        }
         else {
             this.setState("pause");
         }
     }
 }
 class MenuButton {
-    constructor(name, func, states, visible = false) {
+    constructor(menu, name, func, states, visible = false) {
         this.el = document.createElement("menubutton");
         this.el.addEventListener("click", () => func());
+        this.menu = menu;
         this.name = name;
         this.el.innerHTML = name;
         this.isVisible = visible;
         this.states = states;
+        this.element.addEventListener("mouseenter", () => this.menu.game.sound.play("menu_button_hover", 0.5, true));
+        this.element.addEventListener("click", () => this.menu.game.sound.play("menu_button_click", 1, true));
         this.visible = visible;
     }
     get element() { return this.el; }
@@ -1044,8 +1126,9 @@ class Bullet extends MobileModel {
     }
 }
 class Door extends Model {
-    constructor(level, modelSource = new ModelSource()) {
+    constructor(level, modelSource = new ModelSource(), detect = false) {
         super(level, "door_frame", modelSource);
+        this.detect = detect;
         this.isOpen = false;
         this.doorLeft = this.loadDoor();
         this.doorRight = this.loadDoor(-1);
@@ -1055,6 +1138,7 @@ class Door extends Model {
         this.openOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.rY);
         this.openOffset.applyAxisAngle(new THREE.Vector3(0, 0, 1), this.rZ);
         this.openSpeed = 20;
+        this.sound = new ModelSound(this.level.game, this, ["door"]);
     }
     get open() {
         return this.isOpen;
@@ -1074,7 +1158,22 @@ class Door extends Model {
         this.open = distance < 20;
     }
     update(delta) {
-        this.detectPlayer();
+        let wasOpen = this.open;
+        if (this.detect) {
+            this.detectPlayer();
+        }
+        else {
+            let targetsDown = 0;
+            for (let target of this.level.triggerTargets) {
+                if (target.isDown) {
+                    targetsDown++;
+                }
+            }
+            this.open = targetsDown >= this.level.triggerTargets.length;
+        }
+        if (wasOpen != this.open) {
+            this.sound.play("door", 1, true);
+        }
         let newLeftPos = new THREE.Vector3().copy(this.posVector);
         let newRightPos = new THREE.Vector3().copy(this.posVector);
         if (this.open) {
@@ -1116,6 +1215,7 @@ class Gun extends Model {
         this.hand.add(this.mesh);
         this.level.game.events.gunFireStart = this.fireStart;
         this.level.game.events.gunFireStop = this.fireStop;
+        this.sound = new ModelSound(this.level.game, this, ["laser_9"]);
     }
     get isFiring() {
         return this.firing;
@@ -1130,6 +1230,7 @@ class Gun extends Model {
             }
             if (this.fireState == 0 && this.enabled && this.firing && this.cooldown == 0) {
                 this.fireState = 1;
+                this.sound.play("laser_9", 0.5, true);
             }
             if (this.fireState == 1) {
                 this.fireState = 2;
@@ -1502,8 +1603,8 @@ class TriggerTarget extends Model {
         }
         return 0.1;
     }
-    reset() {
-        this.down = false;
+    get isDown() {
+        return this.down;
     }
     update(delta) {
         this.rotVector = new THREE.Vector3();
@@ -1752,15 +1853,16 @@ class TurretTop extends Model {
         super(level, "turret_top");
         this.turretBase = turretBase;
         this.target = new THREE.Vector3();
-        this.cooldown = 1;
+        this.cooldown = 0.5;
         this.intersectsFilter = new IntersectsFilter(this.level, ["practice_target"], [this.name, this.turretBase.name]);
         this.targetOffset = new THREE.Vector3(0, 3.5, 0);
-        this.rotationSpeed = Math.PI;
+        this.rotationSpeed = Math.PI / 2;
         this.currentRotX = this.rX;
         this.currentRotY = this.rY;
         this.playerSpotted = false;
         this.health = 100;
         this.destroyed = false;
+        this.sound = new ModelSound(this.level.game, this, ["laser_2"]);
     }
     hit() {
         if (this.health > 0) {
@@ -1795,6 +1897,7 @@ class TurretTop extends Model {
         this.mesh.rotateOnWorldAxis(new THREE.Vector3(0, 1, 0), this.currentRotY);
     }
     fire() {
+        this.sound.play("laser_2", 1, true);
         new Bullet(this.level, this.mesh.matrixWorld, this.currentTarget, new THREE.Vector3(0, 0, 7), undefined, [this.name, this.turretBase.name], 0xccff00, 10);
     }
     get currentTarget() {
@@ -1823,22 +1926,25 @@ class TurretTop extends Model {
             }
             if (this.cooldown <= 0 && this.playerSpotted) {
                 this.fire();
-                this.cooldown = 1;
+                this.cooldown = 0.5;
             }
         }
     }
 }
 class Level {
-    constructor(game, levelName) {
+    constructor(game, levelName, nextLevel = game.checkNextLevel(levelName)) {
         this.propGame = game;
         this.name = levelName;
+        this.nextLevelName = nextLevel;
         this.isPaused = false;
+        this.complete = false;
         this.noCollisionModels = ["bullet", "gun", "ShadowHelper", "skybox"];
         this.noCollisionNames = [];
         this.scene = new THREE.Scene();
         this.propSkyColor = { r: 255, g: 255, b: 255 };
         this.models = new Array();
         this.lights = new Array();
+        this.triggerTargets = new Array();
         let levelSrcData = this.game.levelDataByName(levelName);
         this.propPlayer = new Player(this, levelSrcData.view_rotate);
         this.playerCamera = new PlayerCamera(this, this.player, levelSrcData.view_rotate);
@@ -1860,6 +1966,9 @@ class Level {
             else if (obj.model == "practice_target") {
                 new PracticeTarget(this, obj);
             }
+            else if (obj.model == "trigger_target") {
+                this.triggerTargets.push(new TriggerTarget(this, obj));
+            }
             else if (obj.model == "door_frame") {
                 new Door(this, obj);
             }
@@ -1870,6 +1979,7 @@ class Level {
                 new Light(this, obj.model, obj);
             }
         }
+        this.end = new LevelEnd(this, levelSrcData);
         this.skybox = new Skybox(this, parseInt("0x" + utils.toHEX(this.propSkyColor)));
         this.assignToRenderer(this.game.renderer);
     }
@@ -1884,6 +1994,9 @@ class Level {
     }
     getScene() {
         return this.scene;
+    }
+    get nextLevel() {
+        return this.nextLevelName;
     }
     get paused() { return this.isPaused; }
     set paused(paused) { this.isPaused = paused; }
@@ -1961,6 +2074,7 @@ class Level {
             model.updateAlways();
         }
         this.playerCamera.updateAlways();
+        this.end.update();
     }
 }
 class MainMenu extends Level {
@@ -1971,6 +2085,100 @@ class MainMenu extends Level {
         this.cam.pZ = 25;
     }
     update() {
+    }
+}
+class GlobalSound {
+    constructor(game) {
+        let soundNames = ["menu_button_hover", "menu_button_click"];
+        this.audioListener = new THREE.AudioListener();
+        this.sounds = new Array();
+        for (let soundName of soundNames) {
+            let buffer = game.soundDataByName(soundName).buffer;
+            let sound = new THREE.Audio(this.listener);
+            sound.name = soundName;
+            sound.setBuffer(buffer);
+            sound.setVolume(0.5);
+            this.sounds.push(sound);
+        }
+    }
+    get listener() {
+        return this.audioListener;
+    }
+    play(name, volume = 1, restart = false) {
+        for (let sound of this.sounds) {
+            if (sound.name == name) {
+                if (restart && sound.isPlaying) {
+                    sound.stop();
+                }
+                if (!sound.isPlaying) {
+                    sound.setVolume(volume);
+                    sound.play();
+                }
+                return;
+            }
+        }
+    }
+    pause(name, stop = false) {
+        for (let sound of this.sounds) {
+            if (sound.name == name) {
+                if (stop && sound.isPlaying) {
+                    sound.stop();
+                }
+                else if (sound.isPlaying) {
+                    sound.pause();
+                }
+                return;
+            }
+        }
+    }
+}
+class ModelSound {
+    constructor(game, model, soundNames = []) {
+        this.soundNames = soundNames;
+        this.sounds = new Array();
+        this.audioListener = game.sound.listener;
+        for (let soundName of soundNames) {
+            let buffer = game.soundDataByName(soundName).buffer;
+            let sound = new THREE.PositionalAudio(this.audioListener);
+            sound.name = soundName;
+            sound.setBuffer(buffer);
+            sound.setVolume(0.5);
+            this.sounds.push(sound);
+            model.getMesh().add(sound);
+        }
+    }
+    play(name, volume = 1, restart = false) {
+        for (let sound of this.sounds) {
+            if (sound.name == name) {
+                if (restart && sound.isPlaying) {
+                    sound.stop();
+                }
+                if (!sound.isPlaying) {
+                    sound.setVolume(volume);
+                    sound.play();
+                }
+                return;
+            }
+        }
+    }
+    pause(name, stop = false) {
+        for (let sound of this.sounds) {
+            if (sound.name == name) {
+                if (stop && sound.isPlaying) {
+                    sound.stop();
+                }
+                else if (sound.isPlaying) {
+                    sound.pause();
+                }
+                return;
+            }
+        }
+    }
+}
+class SoundData {
+    constructor(name, buffer) {
+        this.name = name;
+        this.buffer = buffer;
     }
 }
 //# sourceMappingURL=main.js.map

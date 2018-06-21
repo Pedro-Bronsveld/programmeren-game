@@ -2,6 +2,7 @@ class PreLoad{
     private assetsDir:string;
     private modelsDir:string;
     private levelsDir:string;
+    private soundsDir:string;
 
     private preloadedMeshes: PreloadedStates;
     private loadedMeshes: Array<MeshData>;
@@ -9,11 +10,15 @@ class PreLoad{
     private preloadedLevels: PreloadedStates;
     private loadedLevels: Array<LevelSrcData>;
 
+    private preloadedSounds: PreloadedStates;
+    private loadedSounds: Array<SoundData>;
+
     constructor(){
         // setup paths for asset directories
         this.assetsDir = "assets";
         this.modelsDir = this.assetsDir + "/models";
         this.levelsDir = this.assetsDir + "/levels";
+        this.soundsDir = this.assetsDir + "/sounds";
 
         this.preloadedMeshes = {};
         this.loadedMeshes = new Array<MeshData>();
@@ -21,11 +26,15 @@ class PreLoad{
         this.preloadedLevels = {};
         this.loadedLevels = new Array<LevelSrcData>();
 
+        this.preloadedSounds = {};
+        this.loadedSounds = new Array<SoundData>();
+
         // get model and level names from preload file
         reqwest(this.assetsDir + "/preload_list.json", (preloadData : PreloadData) => {
             // list of all models to load
             let modelNames:Array<string> = preloadData.models;
             let levelNames:Array<string> = preloadData.levels;
+            let soundFiles:Array<string> = preloadData.sounds;
 
             // load all models
             for(let name of modelNames){
@@ -33,9 +42,16 @@ class PreLoad{
                 this.loadMesh(name);
             }
 
+            // load all levels
             for(let name of levelNames){
                 this.preloadedLevels[name] = false;
                 this.loadLevel(name);
+            }
+
+            // load all sounds
+            for(let filename of soundFiles){
+                this.preloadedSounds[filename] = false;
+                this.loadSound(filename);
             }
 
             this.waitForLoad();
@@ -43,11 +59,11 @@ class PreLoad{
         });
     }
 
-    private loadMesh(name: string){
+    private loadMesh(name: string):void{
         // create json loader
         let jsonLoader : THREE.JSONLoader = new THREE.JSONLoader();
 
-        let meshSrc = this.modelsDir + "/" + name + "/model.json";
+        let meshSrc:string = this.modelsDir + "/" + name + "/model.json";
 
         jsonLoader.load(meshSrc, (geometry : THREE.Geometry, materials : any) => {
             // on mesh load
@@ -86,8 +102,8 @@ class PreLoad{
         });
     }
 
-    private loadLevel(name:string){
-        let levelSrc = this.levelsDir + "/" + name + ".json";
+    private loadLevel(name:string):void{
+        let levelSrc:string = this.levelsDir + "/" + name + ".json";
 
         // download level json data
         reqwest(levelSrc, (levelSrcData: LevelSrcData) => {
@@ -99,8 +115,38 @@ class PreLoad{
         });
     }
 
-    private waitForLoad(){
-        let loadingDone = () => {
+    private loadSound(filename:string):void{
+        // create audio loader
+        let audioLoader: THREE.AudioLoader = new THREE.AudioLoader();
+
+        // get sound name from file name
+        let filenameArray:Array<string> = filename.split(".");
+        let name:string = filenameArray.slice(0, filenameArray.length-1 ).join(".");
+
+        // load sound file
+        let soundSrc:string = this.soundsDir + "/" + filename;
+
+        audioLoader.load( soundSrc, (buffer:THREE.AudioBuffer):void => {
+            // on load
+            
+            // create sound data object and add it to loaded array
+            this.loadedSounds.push( new SoundData(name, buffer) );
+            this.preloadedSounds[filename] = true;
+        }, 
+        // on progress
+        //function ( xhr:any ) {
+        function () {
+            //console.log( filename + ": " + (xhr.loaded / xhr.total * 100) + '% loaded' );
+        },
+        // on error
+        function () {
+            console.log( 'An error occured when loading' + filename );
+        }
+        );
+    }
+
+    private waitForLoad():void{
+        let loadingDone = ():boolean => {
             // check if all models have been loaded
             for(let key in this.preloadedMeshes){
                 let state = this.preloadedMeshes[key];
@@ -114,6 +160,12 @@ class PreLoad{
                     return false
                 }
             }
+            for(let key in this.preloadedSounds){
+                let state = this.preloadedSounds[key];
+                if(!state){
+                    return false
+                }
+            }
             return true
         }
         
@@ -121,7 +173,7 @@ class PreLoad{
             requestAnimationFrame( () => this.waitForLoad() );
         }
         else{
-            game = new Game(this.loadedLevels, this.loadedMeshes);
+            game = new Game(this.loadedLevels, this.loadedMeshes, this.loadedSounds);
         }
     }
 }

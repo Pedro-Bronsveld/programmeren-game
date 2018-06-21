@@ -14,13 +14,19 @@ class Level{
     private isPaused: boolean;
     readonly name: string;
     private skybox: Skybox;
+    private end: LevelEnd;
+    public complete: boolean;
+    private nextLevelName:string;
+    readonly triggerTargets:Array<TriggerTarget>;
 
-    constructor(game: Game, levelName: string){
+    constructor(game: Game, levelName: string, nextLevel:string=game.checkNextLevel(levelName)){
         this.propGame = game;
         this.name = levelName;
+        this.nextLevelName = nextLevel;
 
         // used to pause level update loop
         this.isPaused = false;
+        this.complete = false;
 
         // model names always ignored by collision boxes
         this.noCollisionModels = ["bullet", "gun", "ShadowHelper", "skybox"];
@@ -31,6 +37,7 @@ class Level{
         this.propSkyColor = {r: 255, g: 255, b:255};
         this.models = new Array<Model>();
         this.lights = new Array<Light>();
+        this.triggerTargets = new Array<TriggerTarget>();
 
         // get level data by name from game object
         let levelSrcData: LevelSrcData = this.game.levelDataByName(levelName);
@@ -69,6 +76,10 @@ class Level{
                 // practice target
                 new PracticeTarget(this, obj);
             }
+            else if(obj.model == "trigger_target"){
+                // practice target
+                this.triggerTargets.push(new TriggerTarget(this, obj));
+            }
             else if(obj.model == "door_frame"){
                 // door frame
                 new Door(this, obj);
@@ -80,6 +91,9 @@ class Level{
                 new Light(this, obj.model, obj);
             }
         }
+
+        // set end of level
+        this.end = new LevelEnd(this, levelSrcData);
 
         this.skybox = new Skybox(this, parseInt( "0x" + utils.toHEX(this.propSkyColor) ));
 
@@ -100,6 +114,9 @@ class Level{
     }
     public getScene():THREE.Scene{
         return this.scene;
+    }
+    public get nextLevel():string{
+        return this.nextLevelName;
     }
 
     public get paused():boolean{ return this.isPaused }
@@ -203,6 +220,8 @@ class Level{
             model.updateAlways();
         }
         this.playerCamera.updateAlways();
+
+        this.end.update();
         
     }
 }
