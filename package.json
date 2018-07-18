@@ -17,7 +17,7 @@
     "three": "^0.92.0"
   },
   "devDependencies": {
-    "@types/three": "^0.91.13",
+    "@types/three": "^0.91.14",
     "recursive-copy": "^2.0.9"
   }
 }
